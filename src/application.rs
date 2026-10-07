@@ -31,6 +31,7 @@ mod imp {
         fn startup(&self) {
             self.parent_startup();
             let app = self.obj();
+            fix_font_rendering();
             app.setup_actions();
             app.setup_accels();
         }
@@ -251,4 +252,17 @@ impl Application {
             .build();
         dialog.present(self.active_window().as_ref());
     }
+}
+
+/// Works around a GTK bug at fractional scales (e.g. 115 %): in the default
+/// "automatic" font rendering, glyph outlines are hinted but metrics are not,
+/// so the top pixel row of many glyphs is cut off. Manual rendering with
+/// hinted metrics keeps the two consistent while still following the user's
+/// hinting and antialiasing preferences.
+fn fix_font_rendering() {
+    let Some(settings) = gtk::Settings::default() else {
+        return;
+    };
+    settings.set_gtk_font_rendering(gtk::FontRendering::Manual);
+    settings.set_gtk_hint_font_metrics(true);
 }
