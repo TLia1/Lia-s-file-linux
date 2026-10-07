@@ -2,156 +2,41 @@ using Gtk 4.0;
 using Adw 1;
 
 template $LiaFolderPane: Widget {
-  Box {
-    orientation: vertical;
+  Stack content_stack {
+    vexpand: true;
+    hexpand: true;
+    transition-type: crossfade;
+    transition-duration: 150;
 
-    Box nav_row {
-      styles [
-        "nav-row",
-      ]
+    styles [
+      "file-view",
+    ]
 
-      Button {
-        icon-name: "go-previous-symbolic";
-        tooltip-text: _("Back (Alt+Left)");
-        action-name: "win.back";
-        styles [
-          "flat",
-        ]
-      }
+    StackPage {
+      name: "view";
 
-      Button {
-        icon-name: "go-next-symbolic";
-        tooltip-text: _("Forward (Alt+Right)");
-        action-name: "win.forward";
-        styles [
-          "flat",
-        ]
-      }
-
-      Button {
-        icon-name: "go-up-symbolic";
-        tooltip-text: _("Up (Alt+Up)");
-        action-name: "win.up";
-        styles [
-          "flat",
-        ]
-      }
-
-      Button {
-        icon-name: "view-refresh-symbolic";
-        tooltip-text: _("Refresh (F5)");
-        action-name: "win.reload";
-        styles [
-          "flat",
-        ]
-      }
-
-      $LiaAddressBar address_bar {
-        margin-start: 4;
-        margin-end: 4;
-      }
-
-      SearchEntry search_entry {
-        width-request: 240;
-        search-delay: 120;
-        placeholder-text: _("Search");
-      }
+      child: $LiaFileView file_view {};
     }
 
-    Separator {}
+    StackPage {
+      name: "loading";
 
-    Stack content_stack {
-      vexpand: true;
-      transition-type: crossfade;
-      transition-duration: 150;
-
-      styles [
-        "file-view",
-      ]
-
-      StackPage {
-        name: "view";
-
-        child: $LiaFileView file_view {};
-      }
-
-      StackPage {
-        name: "loading";
-
-        child: Adw.Spinner {
-          halign: center;
-          valign: center;
-          width-request: 32;
-          height-request: 32;
-        };
-      }
-
-      StackPage {
-        name: "status";
-
-        child: Adw.StatusPage status_page {
-          styles [
-            "compact",
-          ]
-        };
-      }
+      child: Adw.Spinner {
+        halign: center;
+        valign: center;
+        width-request: 32;
+        height-request: 32;
+      };
     }
 
-    Separator {}
+    StackPage {
+      name: "status";
 
-    Box status_bar {
-      styles [
-        "status-bar",
-      ]
-
-      Label item_count_label {
-        xalign: 0;
+      child: Adw.StatusPage status_page {
         styles [
-          "numeric",
+          "compact",
         ]
-      }
-
-      Label selection_label {
-        xalign: 0;
-        ellipsize: end;
-        hexpand: true;
-        styles [
-          "numeric",
-        ]
-      }
-
-      Label free_space_label {
-        xalign: 1;
-        styles [
-          "numeric",
-        ]
-      }
-
-      Box {
-        styles [
-          "linked",
-        ]
-
-        ToggleButton {
-          icon-name: "view-list-symbolic";
-          tooltip-text: _("Details (Ctrl+1)");
-          action-name: "win.default-view";
-          action-target: "'details'";
-          styles [
-            "flat",
-          ]
-        }
-
-        ToggleButton {
-          icon-name: "view-grid-symbolic";
-          tooltip-text: _("Grid (Ctrl+2)");
-          action-name: "win.default-view";
-          action-target: "'grid'";
-          styles [
-            "flat",
-          ]
-        }
-      }
+      };
     }
   }
 }

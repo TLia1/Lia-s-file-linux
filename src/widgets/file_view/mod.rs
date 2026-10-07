@@ -166,12 +166,15 @@ impl FileView {
         stack.add_named(&grid_scroller, Some("grid"));
         stack.set_parent(self);
 
-        // Backspace goes back, like most file managers.
+        // File shortcuts are local to the view so that Ctrl+C, Delete…
+        // keep working normally in the address bar and search entry.
         let shortcuts = gtk::ShortcutController::new();
-        shortcuts.add_shortcut(gtk::Shortcut::new(
-            gtk::ShortcutTrigger::parse_string("BackSpace"),
-            Some(gtk::NamedAction::new("win.back")),
-        ));
+        for (trigger, action) in VIEW_SHORTCUTS {
+            shortcuts.add_shortcut(gtk::Shortcut::new(
+                gtk::ShortcutTrigger::parse_string(trigger),
+                Some(gtk::NamedAction::new(action)),
+            ));
+        }
         self.add_controller(shortcuts);
 
         let menu = gtk::PopoverMenu::builder()
@@ -220,6 +223,48 @@ impl FileView {
         if had_focus {
             self.grab_focus();
         }
+    }
+
+    /// The id of the sorted column (`name`, `modified`, `type`, `size`) and
+    /// whether the order is descending.
+    pub fn sort_state(&self) -> (String, bool) {
+        let sorter = self.column_sorter();
+        let id = sorter
+            .primary_sort_column()
+            .and_then(|c| c.id())
+            .map_or_else(|| "name".to_owned(), String::from);
+        let descending = sorter.primary_sort_order() == gtk::SortType::Descending;
+        (id, descending)
+    }
+
+    pub fn set_sort(&self, id: &str, descending: bool) {
+        let column_view = self.imp().column_view.get().unwrap();
+        let columns = column_view.columns();
+        let column = (0..columns.n_items())
+            .filter_map(|i| columns.item(i).and_downcast::<gtk::ColumnViewColumn>())
+            .find(|c| c.id().as_deref() == Some(id));
+        if let Some(column) = column {
+            let order = if descending {
+                gtk::SortType::Descending
+            } else {
+                gtk::SortType::Ascending
+            };
+            column_view.sort_by_column(Some(&column), order);
+        }
+    }
+
+    /// Called when the sort column or order changes (menu or header click).
+    pub fn connect_sort_changed<F: Fn(&Self) + 'static>(&self, f: F) -> glib::SignalHandlerId {
+        let view = self.downgrade();
+        self.column_sorter().connect_changed(move |_, _| {
+            if let Some(view) = view.upgrade() {
+                f(&view);
+            }
+        })
+    }
+
+    fn column_sorter(&self) -> gtk::ColumnViewSorter {
+        self.sorter().and_downcast().unwrap()
     }
 
     pub fn icon_size(&self) -> i32 {
@@ -299,6 +344,7 @@ impl FileView {
 
     fn add_columns(&self, column_view: &gtk::ColumnView) {
         let name = gtk::ColumnViewColumn::builder()
+            .id("name")
             .title(gettext("Name"))
             .factory(&self.name_factory())
             .sorter(&sorting::name_sorter())
@@ -306,6 +352,7 @@ impl FileView {
             .resizable(true)
             .build();
         let modified = gtk::ColumnViewColumn::builder()
+            .id("modified")
             .title(gettext("Date modified"))
             .factory(&self.text_factory(0.0, |item| format::date(item.modified())))
             .sorter(&sorting::modified_sorter())
@@ -313,6 +360,7 @@ impl FileView {
             .resizable(true)
             .build();
         let kind = gtk::ColumnViewColumn::builder()
+            .id("type")
             .title(gettext("Type"))
             .factory(&self.text_factory(0.0, |item| item.type_description()))
             .sorter(&sorting::type_sorter())
@@ -320,6 +368,7 @@ impl FileView {
             .resizable(true)
             .build();
         let size = gtk::ColumnViewColumn::builder()
+            .id("size")
             .title(gettext("Size"))
             .factory(&self.text_factory(1.0, |item| {
                 if item.is_dir() {
@@ -461,26 +510,33 @@ impl FileView {
     }
 
     /// Right-click on an item: select it (unless already selected) and show
-    /// the item menu.
+    /// the item menu. Middle-click: open it in a new tab.
     fn add_item_menu_gesture(&self, widget: &impl IsA<gtk::Widget>, list_item: &gtk::ListItem) {
-        let gesture = gtk::GestureClick::builder()
-            .button(gdk::BUTTON_SECONDARY)
-            .build();
+        let gesture = gtk::GestureClick::builder().button(0).build();
         gesture.connect_pressed(clone!(
             #[weak(rename_to = view)]
             self,
             #[weak]
             list_item,
             move |gesture, _, x, y| {
+                let button = gesture.current_button();
+                if button != gdk::BUTTON_SECONDARY && button != gdk::BUTTON_MIDDLE {
+                    return;
+                }
                 gesture.set_state(gtk::EventSequenceState::Claimed);
                 let position = list_item.position();
+                // Middle-click acts on the clicked item only.
                 if let Some(selection) = view.imp().selection.borrow().as_ref()
-                    && !selection.is_selected(position)
+                    && (button == gdk::BUTTON_MIDDLE || !selection.is_selected(position))
                 {
                     selection.select_item(position, true);
                 }
-                let widget = gesture.widget().unwrap();
-                view.popup_menu(&item_menu(), &widget, x, y);
+                if button == gdk::BUTTON_MIDDLE {
+                    let _ = view.activate_action("win.open-in-new-tab", None);
+                } else {
+                    let widget = gesture.widget().unwrap();
+                    view.popup_menu(&item_menu(), &widget, x, y);
+                }
             }
         ));
         widget.add_controller(gesture);
@@ -554,45 +610,124 @@ fn fallback_icon() -> gio::Icon {
     gio::ThemedIcon::new("text-x-generic").upcast()
 }
 
+/// Shortcuts that act on the file view's selection.
+const VIEW_SHORTCUTS: [(&str, &str); 9] = [
+    ("BackSpace", "win.back"),
+    ("<Control>Return", "win.open-in-new-tab"),
+    ("<Control>x", "win.cut"),
+    ("<Control>c", "win.copy"),
+    ("<Control>v", "win.paste"),
+    ("F2", "win.rename"),
+    ("Delete", "win.trash"),
+    ("<Shift>Delete", "win.delete"),
+    ("<Alt>Return", "win.properties"),
+];
+
+fn section(items: &[(String, &str)]) -> gio::Menu {
+    let menu = gio::Menu::new();
+    for (label, action) in items {
+        menu.append(Some(label), Some(action));
+    }
+    menu
+}
+
 fn item_menu() -> gio::Menu {
     let menu = gio::Menu::new();
-    let open = gio::Menu::new();
-    open.append(Some(&gettext("_Open")), Some("win.open"));
-    open.append(Some(&gettext("Open _With…")), Some("win.open-with"));
-    menu.append_section(None, &open);
-    let misc = gio::Menu::new();
-    misc.append(Some(&gettext("Copy _Path")), Some("win.copy-path"));
-    menu.append_section(None, &misc);
+    menu.append_section(
+        None,
+        &section(&[
+            (gettext("_Open"), "win.open"),
+            (gettext("Open _With…"), "win.open-with"),
+            (gettext("Open in New _Tab"), "win.open-in-new-tab"),
+        ]),
+    );
+    menu.append_section(
+        None,
+        &section(&[
+            (gettext("Cu_t"), "win.cut"),
+            (gettext("_Copy"), "win.copy"),
+            (gettext("_Rename…"), "win.rename"),
+            (gettext("Move to _Trash"), "win.trash"),
+        ]),
+    );
+    menu.append_section(
+        None,
+        &section(&[
+            (gettext("_Pin to Sidebar"), "win.pin"),
+            (gettext("Copy _Path"), "win.copy-path"),
+        ]),
+    );
+    menu.append_section(
+        None,
+        &section(&[(gettext("P_roperties"), "win.properties")]),
+    );
     menu
 }
 
 fn background_menu() -> gio::Menu {
     let menu = gio::Menu::new();
 
-    let view = gio::Menu::new();
-    view.append(
-        Some(&gettext("_Details")),
-        Some("win.default-view::details"),
+    let submenus = gio::Menu::new();
+    submenus.append_submenu(
+        Some(&gettext("_View")),
+        &section(&[
+            (gettext("_Details"), "win.default-view::details"),
+            (gettext("_Grid"), "win.default-view::grid"),
+        ]),
     );
-    view.append(Some(&gettext("_Grid")), Some("win.default-view::grid"));
-    let view_section = gio::Menu::new();
-    view_section.append_submenu(Some(&gettext("_View")), &view);
-    menu.append_section(None, &view_section);
+    let sort = gio::Menu::new();
+    sort.append_section(None, &sort_by_section());
+    sort.append_section(None, &sort_order_section());
+    submenus.append_submenu(Some(&gettext("_Sort By")), &sort);
+    submenus.append_submenu(
+        Some(&gettext("_New")),
+        &section(&[
+            (gettext("_Folder"), "win.new-folder"),
+            (gettext("_Empty File"), "win.new-file"),
+        ]),
+    );
+    menu.append_section(None, &submenus);
 
-    let options = gio::Menu::new();
-    options.append(
-        Some(&gettext("Show _Hidden Files")),
-        Some("win.show-hidden"),
+    menu.append_section(
+        None,
+        &section(&[
+            (gettext("_Paste"), "win.paste"),
+            (gettext("Select _All"), "win.select-all"),
+        ]),
     );
-    options.append(
-        Some(&gettext("Sort _Folders Before Files")),
-        Some("win.sort-folders-first"),
+    menu.append_section(
+        None,
+        &section(&[
+            (gettext("Show _Hidden Files"), "win.show-hidden"),
+            (
+                gettext("Sort _Folders Before Files"),
+                "win.sort-folders-first",
+            ),
+        ]),
     );
-    menu.append_section(None, &options);
-
-    let misc = gio::Menu::new();
-    misc.append(Some(&gettext("_Refresh")), Some("win.reload"));
-    misc.append(Some(&gettext("Copy _Path")), Some("win.copy-path"));
-    menu.append_section(None, &misc);
+    menu.append_section(
+        None,
+        &section(&[
+            (gettext("_Refresh"), "win.reload"),
+            (gettext("Copy _Path"), "win.copy-path"),
+            (gettext("P_roperties"), "win.properties"),
+        ]),
+    );
     menu
+}
+
+fn sort_by_section() -> gio::Menu {
+    section(&[
+        (gettext("_Name"), "win.sort-by::name"),
+        (gettext("_Date Modified"), "win.sort-by::modified"),
+        (gettext("_Type"), "win.sort-by::type"),
+        (gettext("_Size"), "win.sort-by::size"),
+    ])
+}
+
+fn sort_order_section() -> gio::Menu {
+    section(&[
+        (gettext("_Ascending"), "win.sort-order::ascending"),
+        (gettext("D_escending"), "win.sort-order::descending"),
+    ])
 }

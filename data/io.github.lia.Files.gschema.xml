@@ -25,6 +25,20 @@
       <summary>Width of the navigation pane</summary>
     </key>
 
+    <!-- Session -->
+    <key name="restore-session" type="b">
+      <default>true</default>
+      <summary>Reopen the tabs of the last session on startup</summary>
+    </key>
+    <key name="session-tabs" type="as">
+      <default>[]</default>
+      <summary>URIs of the tabs open when the last window was closed</summary>
+    </key>
+    <key name="session-active-tab" type="i">
+      <default>0</default>
+      <summary>Index of the selected tab in session-tabs</summary>
+    </key>
+
     <!-- Views -->
     <key name="default-view" enum="io.github.lia.Files.ViewMode">
       <default>'details'</default>

@@ -73,6 +73,40 @@ Adw.ShortcutsDialog shortcuts_dialog {
       title: _("Show hidden files");
       accelerator: "<Control>h";
     }
+
+    Adw.ShortcutsItem {
+      title: _("Navigation pane");
+      accelerator: "F9";
+    }
+  }
+
+  Adw.ShortcutsSection {
+    title: _("Tabs");
+
+    Adw.ShortcutsItem {
+      title: _("New tab");
+      accelerator: "<Control>t";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Close tab");
+      accelerator: "<Control>w";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Next tab");
+      accelerator: "<Control>Tab";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Previous tab");
+      accelerator: "<Control><Shift>Tab";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Open folder in new tab");
+      accelerator: "<Control>Return";
+    }
   }
 
   Adw.ShortcutsSection {
@@ -92,6 +126,11 @@ Adw.ShortcutsDialog shortcuts_dialog {
       title: _("Select all");
       accelerator: "<Control>a";
     }
+
+    Adw.ShortcutsItem {
+      title: _("Invert selection");
+      accelerator: "<Control><Shift>i";
+    }
   }
 
   Adw.ShortcutsSection {
@@ -104,7 +143,7 @@ Adw.ShortcutsDialog shortcuts_dialog {
 
     Adw.ShortcutsItem {
       title: _("Close window");
-      accelerator: "<Control>w";
+      accelerator: "<Control><Shift>w";
     }
 
     Adw.ShortcutsItem {

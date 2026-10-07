@@ -1,6 +1,7 @@
 pub mod directory_model;
 pub mod file_item;
 pub mod history;
+pub mod places;
 pub mod sorting;
 
 pub use directory_model::DirectoryModel;

@@ -22,6 +22,36 @@
   border-radius: 6px;
 }
 
+/* ── Tab strip ───────────────────────────────────────────────────────────── */
+
+tabbar.inline tab {
+  border-radius: 6px;
+  min-height: 30px;
+}
+
+/* ── Command bar ─────────────────────────────────────────────────────────── */
+
+.command-bar {
+  padding: 4px 8px;
+  border-spacing: 2px;
+}
+
+.command-bar > button,
+.command-bar > menubutton > button {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0 8px;
+  border-radius: 6px;
+}
+
+.command-bar > button {
+  padding: 0;
+}
+
+.command-bar > separator {
+  margin: 6px 6px;
+}
+
 /* ── Address bar / breadcrumbs ───────────────────────────────────────────── */
 
 .address-bar {
@@ -150,6 +180,90 @@ gridview.grid-view > child:selected {
 
 gridview.grid-view > child:selected:hover {
   background-color: alpha(var(--accent-bg-color), 0.20);
+}
+
+/* ── Sidebar (navigation pane) ───────────────────────────────────────────── */
+
+lia-sidebar .navigation-sidebar {
+  background: none;
+  padding: 6px 4px;
+}
+
+lia-sidebar .navigation-sidebar > row {
+  min-height: 32px;
+  padding: 0 8px 0 12px;
+  border-radius: 6px;
+  margin: 1px 4px;
+  transition: background-color 150ms ease-out;
+}
+
+lia-sidebar .navigation-sidebar > row:hover {
+  background-color: alpha(var(--accent-bg-color), 0.06);
+}
+
+lia-sidebar .navigation-sidebar > row:selected {
+  background-color: alpha(var(--accent-bg-color), 0.15);
+  color: inherit;
+  box-shadow: inset 3px 0 0 0 var(--accent-bg-color);
+}
+
+lia-sidebar .navigation-sidebar > row:selected:hover {
+  background-color: alpha(var(--accent-bg-color), 0.20);
+}
+
+lia-sidebar .navigation-sidebar > row:dir(rtl):selected {
+  box-shadow: inset -3px 0 0 0 var(--accent-bg-color);
+}
+
+.sidebar-heading {
+  font-size: 0.8em;
+  font-weight: 700;
+  color: alpha(currentColor, 0.55);
+  padding: 14px 16px 4px 16px;
+}
+
+.sidebar-separator {
+  margin: 6px 12px;
+}
+
+lia-sidebar button.eject-button {
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+}
+
+/* Drive usage: accent colour, red when (nearly) full */
+levelbar.usage-bar trough {
+  min-height: 4px;
+  border-radius: 2px;
+  background-color: alpha(currentColor, 0.12);
+  padding: 0;
+}
+
+levelbar.usage-bar block {
+  min-height: 4px;
+  border-radius: 2px;
+}
+
+levelbar.usage-bar block.usage-normal {
+  background-color: var(--accent-bg-color);
+}
+
+levelbar.usage-bar block.usage-critical {
+  background-color: var(--error-bg-color);
+}
+
+levelbar.usage-bar block.empty {
+  background: none;
+}
+
+/* Resize handle on the sidebar's edge: invisible until hovered */
+.sidebar-handle {
+  transition: background-color 150ms ease-out;
+}
+
+.sidebar-handle:hover {
+  background-color: alpha(var(--accent-bg-color), 0.35);
 }
 
 /* ── Status bar ──────────────────────────────────────────────────────────── */

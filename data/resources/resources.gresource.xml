@@ -6,5 +6,6 @@
     <file preprocess="xml-stripblanks">ui/folder-pane.ui</file>
     <file preprocess="xml-stripblanks">ui/address-bar.ui</file>
     <file preprocess="xml-stripblanks">ui/shortcuts.ui</file>
+    <file preprocess="xml-stripblanks">ui/sidebar.ui</file>
   </gresource>
 </gresources>

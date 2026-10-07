@@ -5,6 +5,7 @@ use gettextrs::gettext;
 use gtk::{gio, glib, subclass::prelude::*};
 
 use crate::config;
+use crate::util::settings;
 use crate::window::Window;
 
 mod imp {
@@ -12,7 +13,10 @@ mod imp {
     use adw::subclass::prelude::*;
 
     #[derive(Default)]
-    pub struct Application;
+    pub struct Application {
+        /// The session is restored only for the first window.
+        pub(super) started: std::cell::Cell<bool>,
+    }
 
     #[glib::object_subclass]
     impl ObjectSubclass for Application {
@@ -33,13 +37,23 @@ mod imp {
 
         fn activate(&self) {
             self.parent_activate();
-            self.obj()
-                .new_window(&gio::File::for_path(glib::home_dir()));
+            let app = self.obj();
+            if !self.started.replace(true) && app.restore_session() {
+                return;
+            }
+            app.new_window(&gio::File::for_path(glib::home_dir()));
         }
 
         fn open(&self, files: &[gio::File], _hint: &str) {
+            self.started.set(true);
+            // All folders open as tabs of one window.
+            let mut files = files.iter();
+            let Some(first) = files.next() else {
+                return;
+            };
+            let window = self.obj().new_window(first);
             for file in files {
-                self.obj().new_window(file);
+                window.open_tab(file, false);
             }
         }
     }
@@ -70,12 +84,44 @@ impl Application {
     }
 
     pub fn new_window(&self, location: &gio::File) -> Window {
-        let window = Window::new(self, location);
+        let window = Window::new(self);
+        window.open_tab(location, true);
+        self.present_window(&window);
+        window
+    }
+
+    fn present_window(&self, window: &Window) {
         window.present();
         if let Ok(path) = std::env::var("LIA_SCREENSHOT") {
-            self.screenshot_and_quit(&window, path);
+            self.screenshot_and_quit(window, path);
         }
-        window
+    }
+
+    /// Reopens the tabs saved by the last closed window. Returns false if
+    /// disabled or there is nothing to restore.
+    fn restore_session(&self) -> bool {
+        let settings = settings();
+        if !settings.boolean("restore-session") {
+            return false;
+        }
+        let uris = settings.strv("session-tabs");
+        if uris.is_empty() {
+            return false;
+        }
+        let window = Window::new(self);
+        let active = settings.int("session-active-tab").max(0) as usize;
+        let mut selected = None;
+        for (i, uri) in uris.iter().enumerate() {
+            let pane = window.open_tab(&gio::File::for_uri(uri), i == 0);
+            if i == active {
+                selected = Some(pane);
+            }
+        }
+        if let Some(pane) = selected {
+            window.select_pane(&pane);
+        }
+        self.present_window(&window);
+        true
     }
 
     /// Developer aid: `LIA_SCREENSHOT=out.png [LIA_SCREENSHOT_DELAY=ms]`
@@ -116,7 +162,8 @@ impl Application {
     fn active_location(&self) -> gio::File {
         self.active_window()
             .and_downcast::<Window>()
-            .and_then(|w| w.pane().location())
+            .and_then(|w| w.active_pane())
+            .and_then(|pane| pane.location())
             .unwrap_or_else(|| gio::File::for_path(glib::home_dir()))
     }
 
@@ -124,7 +171,15 @@ impl Application {
         self.add_action_entries([
             gio::ActionEntry::builder("quit")
                 .activate(|app: &Self, _, _| {
+                    // The active window's tabs become the session; the other
+                    // windows must not overwrite it while closing.
+                    if let Some(active) = app.active_window().and_downcast::<Window>() {
+                        active.save_session();
+                    }
                     for window in app.windows() {
+                        if let Some(window) = window.downcast_ref::<Window>() {
+                            window.skip_session_save();
+                        }
                         window.close();
                     }
                 })
@@ -141,6 +196,7 @@ impl Application {
                 .activate(|app: &Self, _, _| app.show_about())
                 .build(),
         ]);
+        self.add_action(&settings().create_action("restore-session"));
     }
 
     fn setup_accels(&self) {
@@ -148,7 +204,12 @@ impl Application {
             ("app.quit", &["<Control>q"]),
             ("app.new-window", &["<Control>n"]),
             ("app.shortcuts", &["<Control>question"]),
-            ("window.close", &["<Control>w"]),
+            ("window.close", &["<Control><Shift>w"]),
+            ("win.new-tab", &["<Control>t"]),
+            ("win.close-tab", &["<Control>w"]),
+            ("win.toggle-sidebar", &["F9"]),
+            ("win.invert-selection", &["<Control><Shift>i"]),
+            ("win.new-folder", &["<Control><Shift>n"]),
             ("win.back", &["<Alt>Left", "Back"]),
             ("win.forward", &["<Alt>Right", "Forward"]),
             ("win.up", &["<Alt>Up"]),

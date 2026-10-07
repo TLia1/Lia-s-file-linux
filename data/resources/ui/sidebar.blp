@@ -1,0 +1,43 @@
+using Gtk 4.0;
+
+template $LiaSidebar: Widget {
+  ScrolledWindow {
+    hscrollbar-policy: never;
+    propagate-natural-height: true;
+
+    ListBox list_box {
+      selection-mode: single;
+
+      styles [
+        "navigation-sidebar",
+      ]
+
+      accessibility {
+        label: _("Places");
+      }
+    }
+  }
+}
+
+menu row_menu {
+  section {
+    item {
+      label: _("Open in New _Tab");
+      action: "sidebar.open-in-new-tab";
+    }
+  }
+
+  section {
+    item {
+      label: _("_Unpin");
+      action: "sidebar.unpin";
+      hidden-when: "action-disabled";
+    }
+
+    item {
+      label: _("_Eject");
+      action: "sidebar.eject";
+      hidden-when: "action-disabled";
+    }
+  }
+}

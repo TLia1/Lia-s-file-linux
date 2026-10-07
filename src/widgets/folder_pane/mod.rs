@@ -1,5 +1,6 @@
-//! `FolderPane`: everything shown for one folder (one tab, later on):
-//! navigation row, file view, empty/error states and status bar.
+//! `FolderPane`: the contents of one tab — the file view and its
+//! empty/error states. The window owns the address bar, search entry and
+//! status bar and binds them to the active pane's properties.
 //!
 //! Model chain:
 //! `DirectoryModel → FilterListModel (hidden, search) → SortListModel
@@ -7,13 +8,13 @@
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::rc::Rc;
+use std::sync::OnceLock;
 
 use gettextrs::{gettext, ngettext};
 use gtk::{gio, glib, glib::clone, prelude::*, subclass::prelude::*};
 
 use crate::model::{DirectoryModel, FileItem, History, sorting};
 use crate::util::{format, settings};
-use crate::widgets::address_bar::AddressBar;
 use crate::widgets::file_view::{DEFAULT_ICON_SIZE, FileView, ICON_SIZES, ViewMode};
 
 /// State read by the filter closure.
@@ -42,25 +43,32 @@ mod imp {
     #[properties(wrapper_type = super::FolderPane)]
     pub struct FolderPane {
         #[template_child]
-        pub(super) address_bar: TemplateChild<AddressBar>,
-        #[template_child]
-        pub(super) search_entry: TemplateChild<gtk::SearchEntry>,
-        #[template_child]
         pub(super) content_stack: TemplateChild<gtk::Stack>,
         #[template_child]
         pub(super) file_view: TemplateChild<FileView>,
         #[template_child]
         pub(super) status_page: TemplateChild<adw::StatusPage>,
-        #[template_child]
-        pub(super) item_count_label: TemplateChild<gtk::Label>,
-        #[template_child]
-        pub(super) selection_label: TemplateChild<gtk::Label>,
-        #[template_child]
-        pub(super) free_space_label: TemplateChild<gtk::Label>,
 
         /// The folder being shown.
         #[property(get, nullable)]
         pub(super) location: RefCell<Option<gio::File>>,
+        /// Short name of the folder, for the tab and window title.
+        #[property(get)]
+        pub(super) title: RefCell<String>,
+        #[property(get)]
+        pub(super) loading: Cell<bool>,
+        /// The instant-filter text. Reset when navigating.
+        #[property(get, set = Self::set_search_text)]
+        pub(super) search_text: RefCell<String>,
+        // Status bar texts.
+        #[property(get)]
+        pub(super) item_count_text: RefCell<String>,
+        #[property(get)]
+        pub(super) selection_text: RefCell<String>,
+        #[property(get)]
+        pub(super) free_space_text: RefCell<String>,
+        #[property(get)]
+        pub(super) n_selected: Cell<u32>,
 
         pub(super) history: RefCell<History<gio::File>>,
         pub(super) directory: DirectoryModel,
@@ -84,7 +92,6 @@ mod imp {
         type ParentType = gtk::Widget;
 
         fn class_init(klass: &mut Self::Class) {
-            AddressBar::ensure_type();
             FileView::ensure_type();
             klass.bind_template();
             klass.set_layout_manager_type::<gtk::BinLayout>();
@@ -98,6 +105,12 @@ mod imp {
 
     #[glib::derived_properties]
     impl ObjectImpl for FolderPane {
+        fn signals() -> &'static [glib::subclass::Signal] {
+            static SIGNALS: OnceLock<Vec<glib::subclass::Signal>> = OnceLock::new();
+            // The sort column or order changed (menu or column header).
+            SIGNALS.get_or_init(|| vec![glib::subclass::Signal::builder("sort-changed").build()])
+        }
+
         fn constructed(&self) {
             self.parent_constructed();
             self.obj().setup();
@@ -119,6 +132,17 @@ mod imp {
     impl WidgetImpl for FolderPane {
         fn grab_focus(&self) -> bool {
             self.file_view.grab_focus()
+        }
+    }
+
+    impl FolderPane {
+        fn set_search_text(&self, text: String) {
+            if *self.search_text.borrow() == text {
+                return;
+            }
+            self.search_text.replace(text);
+            self.obj().apply_search_text();
+            self.obj().notify_search_text();
         }
     }
 }
@@ -180,6 +204,8 @@ impl FolderPane {
                 if !model.loading() {
                     pane.on_load_finished();
                 }
+                pane.imp().loading.set(model.loading());
+                pane.notify_loading();
                 pane.update_content_page();
             }
         ));
@@ -192,45 +218,21 @@ impl FolderPane {
                 pane.update_status();
             }
         ));
+        imp.file_view.connect_sort_changed(clone!(
+            #[weak(rename_to = pane)]
+            self,
+            move |_| pane.emit_by_name::<()>("sort-changed", &[])
+        ));
         selection.connect_selection_changed(clone!(
             #[weak(rename_to = pane)]
             self,
             move |_, _, _| pane.update_status()
         ));
 
-        imp.address_bar.connect_navigate(clone!(
-            #[weak(rename_to = pane)]
-            self,
-            move |_, file| {
-                pane.navigate_to(file);
-                pane.grab_focus();
-            }
-        ));
         imp.file_view.connect_item_activated(clone!(
             #[weak(rename_to = pane)]
             self,
             move |_, item| pane.open_item(item, false)
-        ));
-
-        imp.search_entry.connect_search_changed(clone!(
-            #[weak(rename_to = pane)]
-            self,
-            move |entry| pane.set_search_query(&entry.text())
-        ));
-        imp.search_entry.connect_stop_search(clone!(
-            #[weak(rename_to = pane)]
-            self,
-            move |entry| {
-                entry.set_text("");
-                pane.grab_focus();
-            }
-        ));
-        imp.search_entry.connect_activate(clone!(
-            #[weak(rename_to = pane)]
-            self,
-            move |_| {
-                pane.grab_focus();
-            }
         ));
 
         // ── Settings ───────────────────────────────────────────────────────
@@ -360,16 +362,12 @@ impl FolderPane {
 
         // A new folder starts with an empty search.
         imp.filter_state.query.borrow_mut().clear();
-        if !imp.search_entry.text().is_empty() {
-            imp.search_entry.set_text("");
-        }
-        imp.search_entry.set_placeholder_text(Some(
-            &gettext("Search {}").replace("{}", &display_name(location)),
-        ));
+        self.set_search_text("");
 
-        imp.address_bar.set_location(location);
+        imp.title.replace(display_name(location));
         imp.directory.load(location);
         self.update_free_space();
+        self.notify_title();
         self.notify_location();
     }
 
@@ -421,6 +419,18 @@ impl FolderPane {
         } else {
             self.launch(item.file(), choose_app);
         }
+    }
+
+    /// The folder an item leads to, if it is one (following shortcut
+    /// targets such as mounts in `network://`).
+    pub fn folder_target(item: &FileItem) -> Option<gio::File> {
+        if !item.is_dir() {
+            return None;
+        }
+        Some(
+            item.target_uri()
+                .map_or_else(|| item.file().clone(), |uri| gio::File::for_uri(&uri)),
+        )
     }
 
     pub fn open_selection(&self, choose_app: bool) {
@@ -505,14 +515,37 @@ impl FolderPane {
 
     // ── View options ───────────────────────────────────────────────────────
 
-    pub fn focus_location(&self) {
-        self.imp().address_bar.start_editing();
+    pub fn select_all(&self) {
+        if let Some(selection) = self.imp().selection.get() {
+            selection.select_all();
+        }
     }
 
-    pub fn focus_search(&self) {
-        let entry = &self.imp().search_entry;
-        entry.grab_focus();
-        entry.select_region(0, -1);
+    pub fn invert_selection(&self) {
+        let Some(selection) = self.imp().selection.get() else {
+            return;
+        };
+        let n = selection.n_items();
+        let selected = selection.selection();
+        let inverted = gtk::Bitset::new_range(0, n);
+        inverted.subtract(&selected);
+        selection.set_selection(&inverted, &gtk::Bitset::new_range(0, n));
+    }
+
+    pub fn sort_state(&self) -> (String, bool) {
+        self.imp().file_view.sort_state()
+    }
+
+    pub fn set_sort(&self, id: &str, descending: bool) {
+        self.imp().file_view.set_sort(id, descending);
+    }
+
+    pub fn connect_sort_changed<F: Fn(&Self) + 'static>(&self, f: F) -> glib::SignalHandlerId {
+        self.connect_closure(
+            "sort-changed",
+            false,
+            glib::closure_local!(move |pane: &Self| f(pane)),
+        )
     }
 
     pub fn zoom(&self, step: i32) {
@@ -539,9 +572,9 @@ impl FolderPane {
         });
     }
 
-    fn set_search_query(&self, text: &str) {
+    fn apply_search_text(&self) {
         let imp = self.imp();
-        let query = text.trim().to_lowercase();
+        let query = imp.search_text.borrow().trim().to_lowercase();
         let previous = imp.filter_state.query.replace(query.clone());
         if previous == query {
             return;
@@ -611,7 +644,11 @@ impl FolderPane {
     fn update_status(&self) {
         let imp = self.imp();
         let visible = imp.sort_model.get().map_or(0, |m| m.n_items());
-        imp.item_count_label.set_label(&format::item_count(visible));
+        self.set_text(
+            &imp.item_count_text,
+            format::item_count(visible),
+            Self::notify_item_count_text,
+        );
 
         let selected = self.selected_items();
         let label = if selected.is_empty() {
@@ -627,7 +664,20 @@ impl FolderPane {
             }
             text
         };
-        imp.selection_label.set_label(&label);
+        self.set_text(&imp.selection_text, label, Self::notify_selection_text);
+        if imp.n_selected.get() != selected.len() as u32 {
+            imp.n_selected.set(selected.len() as u32);
+            self.notify_n_selected();
+        }
+    }
+
+    /// Updates one of the status text properties, notifying on change.
+    fn set_text(&self, field: &RefCell<String>, text: String, notify: fn(&Self)) {
+        if *field.borrow() == text {
+            return;
+        }
+        field.replace(text);
+        notify(self);
     }
 
     fn update_free_space(&self) {
@@ -635,7 +685,11 @@ impl FolderPane {
         if let Some(task) = imp.free_space_task.take() {
             task.abort();
         }
-        imp.free_space_label.set_label("");
+        self.set_text(
+            &imp.free_space_text,
+            String::new(),
+            Self::notify_free_space_text,
+        );
         let Some(location) = self.location() else {
             return;
         };
@@ -654,9 +708,11 @@ impl FolderPane {
                 };
                 if info.has_attribute(gio::FILE_ATTRIBUTE_FILESYSTEM_FREE) {
                     let free = info.attribute_uint64(gio::FILE_ATTRIBUTE_FILESYSTEM_FREE);
-                    pane.imp()
-                        .free_space_label
-                        .set_label(&gettext("{} free").replace("{}", &format::size(free)));
+                    pane.set_text(
+                        &pane.imp().free_space_text,
+                        gettext("{} free").replace("{}", &format::size(free)),
+                        Self::notify_free_space_text,
+                    );
                 }
             }
         ));

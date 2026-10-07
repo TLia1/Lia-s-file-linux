@@ -5,8 +5,11 @@ data/resources/ui/window.blp
 data/resources/ui/folder-pane.blp
 data/resources/ui/address-bar.blp
 data/resources/ui/shortcuts.blp
+data/resources/ui/sidebar.blp
 src/application.rs
 src/util/format.rs
 src/widgets/address_bar/mod.rs
 src/widgets/file_view/mod.rs
 src/widgets/folder_pane/mod.rs
+src/widgets/sidebar/mod.rs
+src/window/mod.rs

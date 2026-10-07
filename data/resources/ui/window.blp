@@ -8,15 +8,53 @@ template $LiaWindow: Adw.ApplicationWindow {
   height-request: 294;
   title: _("Files");
 
+  Adw.Breakpoint {
+    condition ("max-width: 720sp")
+
+    setters {
+      split_view.collapsed: true;
+      new_content.label: "";
+      sort_content.label: "";
+      view_content.label: "";
+      search_entry.width-request: 160;
+    }
+  }
+
   content: Adw.ToastOverlay toast_overlay {
     Adw.ToolbarView {
-      top-bar-style: raised;
+      top-bar-style: raised_border;
+      bottom-bar-style: raised_border;
 
+      // ── Tab strip ──────────────────────────────────────────────────────
       [top]
       Adw.HeaderBar header_bar {
-        title-widget: Adw.WindowTitle window_title {
-          title: _("Files");
+        title-widget: Adw.TabBar tab_bar {
+          view: tab_view;
+          autohide: false;
+          expand-tabs: false;
+          hexpand: true;
+
+          styles [
+            "inline",
+          ]
+
+          end-action-widget: Button {
+            icon-name: "tab-new-symbolic";
+            tooltip-text: _("New Tab (Ctrl+T)");
+            action-name: "win.new-tab";
+
+            styles [
+              "flat",
+            ]
+          };
         };
+
+        [start]
+        ToggleButton {
+          icon-name: "sidebar-show-symbolic";
+          tooltip-text: _("Navigation Pane (F9)");
+          active: bind split_view.show-sidebar bidirectional;
+        }
 
         [end]
         MenuButton {
@@ -27,7 +65,274 @@ template $LiaWindow: Adw.ApplicationWindow {
         }
       }
 
-      content: Adw.Bin pane_bin {};
+      // ── Navigation: back / forward / up / refresh, address, search ────
+      [top]
+      Box nav_row {
+        styles [
+          "nav-row",
+        ]
+
+        Button {
+          icon-name: "go-previous-symbolic";
+          tooltip-text: _("Back (Alt+Left)");
+          action-name: "win.back";
+
+          styles [
+            "flat",
+          ]
+        }
+
+        Button {
+          icon-name: "go-next-symbolic";
+          tooltip-text: _("Forward (Alt+Right)");
+          action-name: "win.forward";
+
+          styles [
+            "flat",
+          ]
+        }
+
+        Button {
+          icon-name: "go-up-symbolic";
+          tooltip-text: _("Up (Alt+Up)");
+          action-name: "win.up";
+
+          styles [
+            "flat",
+          ]
+        }
+
+        Button {
+          icon-name: "view-refresh-symbolic";
+          tooltip-text: _("Refresh (F5)");
+          action-name: "win.reload";
+
+          styles [
+            "flat",
+          ]
+        }
+
+        $LiaAddressBar address_bar {
+          margin-start: 4;
+          margin-end: 4;
+        }
+
+        SearchEntry search_entry {
+          width-request: 240;
+          search-delay: 120;
+          placeholder-text: _("Search");
+        }
+      }
+
+      // ── Command bar ────────────────────────────────────────────────────
+      [top]
+      Box command_bar {
+        styles [
+          "command-bar",
+        ]
+
+        MenuButton {
+          menu-model: new_menu;
+          always-show-arrow: true;
+          tooltip-text: _("Create a new item");
+
+          child: Adw.ButtonContent new_content {
+            icon-name: "list-add-symbolic";
+            label: _("New");
+          };
+
+          styles [
+            "flat",
+          ]
+        }
+
+        Separator {
+          orientation: vertical;
+        }
+
+        Button {
+          icon-name: "edit-cut-symbolic";
+          tooltip-text: _("Cut (Ctrl+X)");
+          action-name: "win.cut";
+
+          styles [
+            "flat",
+          ]
+        }
+
+        Button {
+          icon-name: "edit-copy-symbolic";
+          tooltip-text: _("Copy (Ctrl+C)");
+          action-name: "win.copy";
+
+          styles [
+            "flat",
+          ]
+        }
+
+        Button {
+          icon-name: "edit-paste-symbolic";
+          tooltip-text: _("Paste (Ctrl+V)");
+          action-name: "win.paste";
+
+          styles [
+            "flat",
+          ]
+        }
+
+        Button {
+          icon-name: "document-edit-symbolic";
+          tooltip-text: _("Rename (F2)");
+          action-name: "win.rename";
+
+          styles [
+            "flat",
+          ]
+        }
+
+        Button {
+          icon-name: "user-trash-symbolic";
+          tooltip-text: _("Move to Trash (Delete)");
+          action-name: "win.trash";
+
+          styles [
+            "flat",
+          ]
+        }
+
+        Separator {
+          orientation: vertical;
+        }
+
+        MenuButton {
+          menu-model: sort_menu;
+          always-show-arrow: true;
+          tooltip-text: _("Sort");
+
+          child: Adw.ButtonContent sort_content {
+            icon-name: "view-sort-ascending-symbolic";
+            label: _("Sort");
+          };
+
+          styles [
+            "flat",
+          ]
+        }
+
+        MenuButton {
+          menu-model: view_menu;
+          always-show-arrow: true;
+          tooltip-text: _("View");
+
+          child: Adw.ButtonContent view_content {
+            icon-name: "view-grid-symbolic";
+            label: _("View");
+          };
+
+          styles [
+            "flat",
+          ]
+        }
+
+        MenuButton {
+          icon-name: "view-more-symbolic";
+          menu-model: more_menu;
+          tooltip-text: _("More Options");
+
+          styles [
+            "flat",
+          ]
+        }
+      }
+
+      // ── Sidebar | tabs ─────────────────────────────────────────────────
+      content: Adw.OverlaySplitView split_view {
+        sidebar-width-unit: px;
+        min-sidebar-width: 220;
+        max-sidebar-width: 220;
+        sidebar-width-fraction: 1;
+
+        sidebar: Overlay {
+          child: $LiaSidebar sidebar {};
+
+          [overlay]
+          Box sidebar_handle {
+            halign: end;
+            width-request: 6;
+            tooltip-text: _("Drag to resize");
+
+            styles [
+              "sidebar-handle",
+            ]
+          }
+        };
+
+        content: Adw.TabView tab_view {
+          menu-model: tab_menu;
+        };
+      };
+
+      // ── Status bar ─────────────────────────────────────────────────────
+      [bottom]
+      Box status_bar {
+        styles [
+          "status-bar",
+        ]
+
+        Label item_count_label {
+          xalign: 0;
+
+          styles [
+            "numeric",
+          ]
+        }
+
+        Label selection_label {
+          xalign: 0;
+          ellipsize: end;
+          hexpand: true;
+
+          styles [
+            "numeric",
+          ]
+        }
+
+        Label free_space_label {
+          xalign: 1;
+
+          styles [
+            "numeric",
+          ]
+        }
+
+        Box {
+          styles [
+            "linked",
+          ]
+
+          ToggleButton {
+            icon-name: "view-list-symbolic";
+            tooltip-text: _("Details (Ctrl+1)");
+            action-name: "win.default-view";
+            action-target: "'details'";
+
+            styles [
+              "flat",
+            ]
+          }
+
+          ToggleButton {
+            icon-name: "view-grid-symbolic";
+            tooltip-text: _("Grid (Ctrl+2)");
+            action-name: "win.default-view";
+            action-target: "'grid'";
+
+            styles [
+              "flat",
+            ]
+          }
+        }
+      }
     }
   };
 }
@@ -37,6 +342,11 @@ menu primary_menu {
     item {
       label: _("_New Window");
       action: "app.new-window";
+    }
+
+    item {
+      label: _("New _Tab");
+      action: "win.new-tab";
     }
   }
 
@@ -50,6 +360,11 @@ menu primary_menu {
       label: _("Sort _Folders Before Files");
       action: "win.sort-folders-first";
     }
+
+    item {
+      label: _("_Reopen Tabs on Startup");
+      action: "app.restore-session";
+    }
   }
 
   section {
@@ -61,6 +376,178 @@ menu primary_menu {
     item {
       label: _("_About Files");
       action: "app.about";
+    }
+  }
+}
+
+menu new_menu {
+  section {
+    item {
+      label: _("_Folder");
+      action: "win.new-folder";
+    }
+
+    item {
+      label: _("_Empty File");
+      action: "win.new-file";
+    }
+  }
+}
+
+menu sort_menu {
+  section {
+    item {
+      label: _("_Name");
+      action: "win.sort-by";
+      target: "name";
+    }
+
+    item {
+      label: _("_Date Modified");
+      action: "win.sort-by";
+      target: "modified";
+    }
+
+    item {
+      label: _("_Type");
+      action: "win.sort-by";
+      target: "type";
+    }
+
+    item {
+      label: _("_Size");
+      action: "win.sort-by";
+      target: "size";
+    }
+  }
+
+  section {
+    item {
+      label: _("_Ascending");
+      action: "win.sort-order";
+      target: "ascending";
+    }
+
+    item {
+      label: _("D_escending");
+      action: "win.sort-order";
+      target: "descending";
+    }
+  }
+
+  section {
+    item {
+      label: _("_Folders First");
+      action: "win.sort-folders-first";
+    }
+  }
+}
+
+menu view_menu {
+  section {
+    item {
+      label: _("_Details");
+      action: "win.default-view";
+      target: "details";
+    }
+
+    item {
+      label: _("_Grid");
+      action: "win.default-view";
+      target: "grid";
+    }
+  }
+
+  section {
+    item {
+      label: _("Zoom _In");
+      action: "win.zoom-in";
+    }
+
+    item {
+      label: _("Zoom _Out");
+      action: "win.zoom-out";
+    }
+
+    item {
+      label: _("_Reset Zoom");
+      action: "win.zoom-reset";
+    }
+  }
+
+  section {
+    item {
+      label: _("Show _Hidden Files");
+      action: "win.show-hidden";
+    }
+
+    item {
+      label: _("_Navigation Pane");
+      action: "win.toggle-sidebar";
+    }
+  }
+}
+
+menu more_menu {
+  section {
+    item {
+      label: _("Select _All");
+      action: "win.select-all";
+    }
+
+    item {
+      label: _("_Invert Selection");
+      action: "win.invert-selection";
+    }
+  }
+
+  section {
+    item {
+      label: _("Open in New _Tab");
+      action: "win.open-in-new-tab";
+    }
+
+    item {
+      label: _("_Pin to Sidebar");
+      action: "win.pin";
+    }
+
+    item {
+      label: _("Copy _Path");
+      action: "win.copy-path";
+    }
+  }
+
+  section {
+    item {
+      label: _("P_roperties");
+      action: "win.properties";
+    }
+  }
+}
+
+menu tab_menu {
+  section {
+    item {
+      label: _("_Duplicate Tab");
+      action: "win.tab-duplicate";
+    }
+
+    item {
+      label: _("Move to New _Window");
+      action: "win.tab-move-to-window";
+    }
+  }
+
+  section {
+    item {
+      label: _("Close _Other Tabs");
+      action: "win.tab-close-others";
+    }
+
+    item {
+      label: _("_Close Tab");
+      action: "win.tab-close";
     }
   }
 }
