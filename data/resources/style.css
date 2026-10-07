@@ -48,6 +48,10 @@ tabbar.inline tab {
   padding: 0;
 }
 
+.command-bar > button.labeled {
+  padding: 0 8px;
+}
+
 .command-bar > separator {
   margin: 6px 6px;
 }
@@ -147,6 +151,19 @@ columnview.details-view > listview:focus-visible > row:focus-visible,
 gridview.grid-view:focus-visible > child:focus-visible {
   outline: 2px solid var(--accent-color);
   outline-offset: -2px;
+}
+
+/* Drag and drop: the folder under the pointer */
+columnview.details-view > listview > row.drop-target,
+gridview.grid-view > child.drop-target {
+  background-color: alpha(var(--accent-bg-color), 0.22);
+  outline: 2px solid var(--accent-bg-color);
+  outline-offset: -2px;
+}
+
+/* Inline rename */
+popover.rename-popover > contents {
+  padding: 6px;
 }
 
 /* Secondary text (dates, types, sizes). Don't restyle libadwaita's
@@ -284,4 +301,56 @@ levelbar.usage-bar block.empty {
   min-height: 22px;
   padding: 0 4px;
   border-radius: 4px;
+}
+
+/* ── File operations ─────────────────────────────────────────────────────── */
+
+operations-button menubutton > button {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 6px;
+}
+
+popover.operations-popover > contents {
+  padding: 6px;
+  border-radius: 12px;
+}
+
+.operations-title {
+  padding: 6px 10px 2px 10px;
+}
+
+list.operations-list {
+  background: none;
+}
+
+list.operations-list > row.job-row {
+  padding: 8px 10px;
+  border-radius: 8px;
+  transition: opacity 600ms ease-out;
+}
+
+list.operations-list > row.job-row:hover {
+  background-color: alpha(currentColor, 0.04);
+}
+
+list.operations-list > row.job-row.finished {
+  opacity: 0.55;
+}
+
+list.operations-list > row.job-row.failed label.caption {
+  color: var(--error-color);
+  opacity: 1;
+}
+
+progressbar.job-progress > trough,
+progressbar.job-progress > trough > progress {
+  min-height: 4px;
+  border-radius: 2px;
+}
+
+/* Conflict dialog: the two versions side by side */
+.conflict-side {
+  padding: 12px;
 }

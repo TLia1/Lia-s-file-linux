@@ -2,7 +2,9 @@
 
 pub mod application;
 pub mod config;
+pub mod dialogs;
 pub mod model;
+pub mod services;
 pub mod util;
 pub mod widgets;
 pub mod window;

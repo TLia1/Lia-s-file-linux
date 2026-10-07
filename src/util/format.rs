@@ -13,6 +13,30 @@ pub fn item_count(n: u32) -> String {
     ngettext("{} item", "{} items", n).replace("{}", &n.to_string())
 }
 
+/// "5.2 MB/s".
+pub fn speed(bytes_per_second: f64) -> String {
+    // Translators: transfer speed, e.g. "5.2 MB/s"
+    gettext("{}/s").replace("{}", &size(bytes_per_second.max(0.0) as u64))
+}
+
+/// "8 s left", "3 min left", "2 h 5 min left".
+pub fn time_left(seconds: u64) -> String {
+    if seconds < 60 {
+        let seconds = seconds.max(1) as u32;
+        ngettext("{} second left", "{} seconds left", seconds).replace("{}", &seconds.to_string())
+    } else if seconds < 3600 {
+        let minutes = seconds.div_ceil(60) as u32;
+        ngettext("{} minute left", "{} minutes left", minutes).replace("{}", &minutes.to_string())
+    } else {
+        let hours = seconds / 3600;
+        let minutes = (seconds % 3600) / 60;
+        // Translators: "2 h 5 min left"
+        gettext("{h} h {m} min left")
+            .replace("{h}", &hours.to_string())
+            .replace("{m}", &minutes.to_string())
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Day {
     Today,
@@ -101,5 +125,14 @@ mod tests {
         assert_eq!(size(1_200_000), "1.2\u{a0}MB");
         assert_eq!(item_count(1), "1 item");
         assert_eq!(item_count(5), "5 items");
+    }
+
+    #[test]
+    fn formats_speed_and_time_left() {
+        assert_eq!(speed(5_200_000.0), "5.2\u{a0}MB/s");
+        assert_eq!(time_left(0), "1 second left");
+        assert_eq!(time_left(8), "8 seconds left");
+        assert_eq!(time_left(61), "2 minutes left");
+        assert_eq!(time_left(2 * 3600 + 5 * 60 + 30), "2 h 5 min left");
     }
 }

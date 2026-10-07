@@ -5,17 +5,26 @@
 //! Model chain:
 //! `DirectoryModel → FilterListModel (hidden, search) → SortListModel
 //!  (folders first + column sorter) → MultiSelection → FileView`
+//!
+//! File operations started from the pane (drops, renames…) go to the job
+//! queue; once done, what they created in this folder gets selected.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::rc::Rc;
 use std::sync::OnceLock;
+use std::time::Duration;
 
 use gettextrs::{gettext, ngettext};
-use gtk::{gio, glib, glib::clone, prelude::*, subclass::prelude::*};
+use gtk::{gdk, gio, glib, glib::clone, prelude::*, subclass::prelude::*};
 
 use crate::model::{DirectoryModel, FileItem, History, sorting};
+use crate::services::file_ops::{FileOpJob, Operation, naming, queue};
 use crate::util::{format, settings};
+use crate::widgets::dnd;
 use crate::widgets::file_view::{DEFAULT_ICON_SIZE, FileView, ICON_SIZES, ViewMode};
+
+/// How long to wait for the items an operation created to show up.
+const SELECT_TIMEOUT: Duration = Duration::from_secs(3);
 
 /// State read by the filter closure.
 #[derive(Default)]
@@ -69,6 +78,14 @@ mod imp {
         pub(super) free_space_text: RefCell<String>,
         #[property(get)]
         pub(super) n_selected: Cell<u32>,
+        /// Files can be created in the folder.
+        #[property(get)]
+        pub(super) writable: Cell<bool>,
+        /// The folder is the trash (or inside it).
+        #[property(get)]
+        pub(super) is_trash: Cell<bool>,
+        /// The folder's file system needs Windows-compatible names.
+        pub(super) portable_names: Cell<bool>,
 
         pub(super) history: RefCell<History<gio::File>>,
         pub(super) directory: DirectoryModel,
@@ -82,7 +99,14 @@ mod imp {
         /// from when going up or back).
         pub(super) select_after_load: RefCell<Option<gio::File>>,
         pub(super) free_space_task: RefCell<Option<glib::JoinHandle<()>>>,
+        pub(super) info_task: RefCell<Option<glib::JoinHandle<()>>>,
         pub(super) settings_handlers: RefCell<Vec<glib::SignalHandlerId>>,
+        pub(super) queue_handler: RefCell<Option<glib::SignalHandlerId>>,
+        /// Items to select once they appear (created by an operation), and
+        /// whether to rename the first one.
+        pub(super) pending_select: RefCell<Vec<gio::File>>,
+        pub(super) pending_rename: Cell<bool>,
+        pub(super) pending_timeout: RefCell<Option<glib::SourceId>>,
     }
 
     #[glib::object_subclass]
@@ -121,8 +145,17 @@ mod imp {
             for handler in self.settings_handlers.take() {
                 settings.disconnect(handler);
             }
-            if let Some(task) = self.free_space_task.take() {
+            for task in [self.free_space_task.take(), self.info_task.take()]
+                .into_iter()
+                .flatten()
+            {
                 task.abort();
+            }
+            if let Some(handler) = self.queue_handler.take() {
+                queue().disconnect(handler);
+            }
+            if let Some(timeout) = self.pending_timeout.take() {
+                timeout.remove();
             }
             self.directory.stop();
             self.dispose_template();
@@ -216,6 +249,7 @@ impl FolderPane {
                 pane.keep_at_top_while_loading();
                 pane.update_content_page();
                 pane.update_status();
+                pane.apply_pending_selection(false);
             }
         ));
         imp.file_view.connect_sort_changed(clone!(
@@ -234,6 +268,17 @@ impl FolderPane {
             self,
             move |_, item| pane.open_item(item, false)
         ));
+        imp.file_view.connect_drop_files(clone!(
+            #[weak(rename_to = pane)]
+            self,
+            move |_, dest, files, action| pane.drop_files(dest, &files, action)
+        ));
+        let handler = queue().connect_job_finished(clone!(
+            #[weak(rename_to = pane)]
+            self,
+            move |_, job| pane.on_job_finished(job)
+        ));
+        imp.queue_handler.replace(Some(handler));
 
         // ── Settings ───────────────────────────────────────────────────────
         imp.file_view
@@ -365,8 +410,16 @@ impl FolderPane {
         self.set_search_text("");
 
         imp.title.replace(display_name(location));
+        imp.pending_select.borrow_mut().clear();
         imp.directory.load(location);
+        imp.file_view.set_location(Some(location));
+        let is_trash = dnd::is_trash(location);
+        imp.file_view.set_trash_mode(is_trash);
+        if imp.is_trash.replace(is_trash) != is_trash {
+            self.notify_is_trash();
+        }
         self.update_free_space();
+        self.update_location_info();
         self.notify_title();
         self.notify_location();
     }
@@ -405,6 +458,7 @@ impl FolderPane {
         if let Some(position) = position {
             imp.file_view.scroll_to(position, true);
         }
+        self.apply_pending_selection(false);
     }
 
     // ── Opening ────────────────────────────────────────────────────────────
@@ -488,6 +542,15 @@ impl FolderPane {
             .collect()
     }
 
+    /// The files operations on the selection act on (shortcut entries
+    /// resolved to their targets).
+    pub fn selected_files(&self) -> Vec<gio::File> {
+        self.selected_items()
+            .iter()
+            .map(FileItem::target_file)
+            .collect()
+    }
+
     /// Copies the paths of the selected items (or of the current folder) as
     /// text.
     pub fn copy_path(&self) {
@@ -511,6 +574,232 @@ impl FolderPane {
         } else {
             gettext("Paths copied")
         });
+    }
+
+    // ── File operations ────────────────────────────────────────────────────
+
+    /// Starts `operation`; once done, selects what it created in this
+    /// folder (and renames the first item if `rename`).
+    pub fn run_operation(&self, operation: Operation, rename: bool) -> FileOpJob {
+        let job = queue().submit(operation, Some(self));
+        job.connect_finished(clone!(
+            #[weak(rename_to = pane)]
+            self,
+            move |job| {
+                let created = job.with_outcome(|o| o.created.clone()).unwrap_or_default();
+                pane.select_files(created, rename);
+            }
+        ));
+        job
+    }
+
+    /// Copies, moves or links dropped files into `dest`.
+    pub fn drop_files(&self, dest: &gio::File, files: &[gio::File], action: gdk::DragAction) {
+        if let Some(operation) = dnd::operation_for(files, dest, action) {
+            self.run_operation(operation, false);
+        }
+    }
+
+    /// Selects `files` as soon as they're listed (they may still be on
+    /// their way through the file monitor).
+    pub fn select_files(&self, files: Vec<gio::File>, rename: bool) {
+        let imp = self.imp();
+        let Some(location) = self.location() else {
+            return;
+        };
+        let files: Vec<gio::File> = files
+            .into_iter()
+            .filter(|f| f.has_parent(Some(&location)))
+            .collect();
+        if files.is_empty() {
+            return;
+        }
+        imp.pending_select.replace(files);
+        imp.pending_rename.set(rename);
+        if let Some(timeout) = imp.pending_timeout.take() {
+            timeout.remove();
+        }
+        let timeout = glib::timeout_add_local_once(
+            SELECT_TIMEOUT,
+            clone!(
+                #[weak(rename_to = pane)]
+                self,
+                move || {
+                    pane.imp().pending_timeout.take();
+                    pane.apply_pending_selection(true);
+                }
+            ),
+        );
+        imp.pending_timeout.replace(Some(timeout));
+        self.apply_pending_selection(false);
+    }
+
+    /// Selects the pending items once they're all listed (or, when
+    /// `give_up`, those that are).
+    fn apply_pending_selection(&self, give_up: bool) {
+        let imp = self.imp();
+        if imp.pending_select.borrow().is_empty() || imp.directory.loading() {
+            return;
+        }
+        let items: Vec<Option<FileItem>> = imp
+            .pending_select
+            .borrow()
+            .iter()
+            .map(|file| imp.directory.find(file))
+            .collect();
+        if !give_up && items.iter().any(Option::is_none) {
+            return;
+        }
+        let items: std::collections::HashSet<FileItem> = items.into_iter().flatten().collect();
+        imp.pending_select.borrow_mut().clear();
+        if let Some(timeout) = imp.pending_timeout.take() {
+            timeout.remove();
+        }
+
+        let sort_model = imp.sort_model.get().unwrap();
+        let selected = gtk::Bitset::new_empty();
+        let mut first = None;
+        for i in 0..sort_model.n_items() {
+            if let Some(item) = sort_model.item(i).and_downcast::<FileItem>()
+                && items.contains(&item)
+            {
+                selected.add(i);
+                first = first.or(Some((i, item)));
+            }
+        }
+        let Some((position, item)) = first else {
+            return;
+        };
+        let selection = imp.selection.get().unwrap();
+        selection.set_selection(&selected, &gtk::Bitset::new_range(0, sort_model.n_items()));
+        imp.file_view.scroll_to(position, false);
+        if imp.pending_rename.get() {
+            self.rename_item(&item, position);
+        }
+    }
+
+    /// Renames the first selected item in place.
+    pub fn start_rename(&self) {
+        let imp = self.imp();
+        let Some(item) = self.selected_items().into_iter().next() else {
+            return;
+        };
+        let sort_model = imp.sort_model.get().unwrap();
+        let position = (0..sort_model.n_items())
+            .find(|&i| sort_model.item(i).and_downcast::<FileItem>().as_ref() == Some(&item));
+        if let Some(position) = position {
+            self.rename_item(&item, position);
+        }
+    }
+
+    fn rename_item(&self, item: &FileItem, position: u32) {
+        let imp = self.imp();
+        let name = item.display_name().to_string();
+        let select = naming::stem_char_count(&name, item.is_dir());
+        let portable = imp.portable_names.get();
+        let directory = imp.directory.clone();
+        let file = item.file().clone();
+        let original = name.clone();
+        let validate = move |text: &str| -> Option<String> {
+            if let Err(err) = naming::validate_name(text, portable) {
+                return Some(err.message());
+            }
+            let parent = file.parent()?;
+            directory
+                .find(&parent.child(text))
+                .filter(|existing| text != original && !existing.file().equal(&file))
+                .map(|_| gettext("An item named “{}” already exists").replace("{}", text))
+        };
+        let file = item.file().clone();
+        let commit = clone!(
+            #[weak(rename_to = pane)]
+            self,
+            move |name: String| {
+                pane.run_operation(
+                    Operation::Rename {
+                        file: file.clone(),
+                        name,
+                    },
+                    false,
+                );
+            }
+        );
+        imp.file_view
+            .start_rename(position, &name, select, validate, commit);
+    }
+
+    /// Folders that aren't watched live (some network locations) are
+    /// reloaded after an operation changed them.
+    fn on_job_finished(&self, job: &FileOpJob) {
+        let Some(location) = self.location() else {
+            return;
+        };
+        if self.imp().directory.is_monitored() && location.is_native() {
+            return;
+        }
+        let operation = job.operation();
+        let touches = operation.destination().is_some_and(|d| d.equal(&location))
+            || operation
+                .sources()
+                .iter()
+                .any(|s| s.parent().is_some_and(|p| p.equal(&location)));
+        if touches {
+            self.reload();
+        }
+    }
+
+    /// Finds out whether the folder is writable and needs portable names.
+    fn update_location_info(&self) {
+        let imp = self.imp();
+        if let Some(task) = imp.info_task.take() {
+            task.abort();
+        }
+        let Some(location) = self.location() else {
+            return;
+        };
+        // Until we know, assume local folders are writable.
+        self.set_writable(!imp.is_trash.get() && location.is_native());
+        imp.portable_names.set(false);
+        let task = glib::spawn_future_local(clone!(
+            #[weak(rename_to = pane)]
+            self,
+            async move {
+                let can_write = location
+                    .query_info_future(
+                        gio::FILE_ATTRIBUTE_ACCESS_CAN_WRITE,
+                        gio::FileQueryInfoFlags::NONE,
+                        glib::Priority::LOW,
+                    )
+                    .await
+                    .map(|info| {
+                        !info.has_attribute(gio::FILE_ATTRIBUTE_ACCESS_CAN_WRITE)
+                            || info.boolean(gio::FILE_ATTRIBUTE_ACCESS_CAN_WRITE)
+                    })
+                    .unwrap_or(false);
+                pane.set_writable(can_write && !pane.is_trash());
+                let fs_type = location
+                    .query_filesystem_info_future(
+                        gio::FILE_ATTRIBUTE_FILESYSTEM_TYPE,
+                        glib::Priority::LOW,
+                    )
+                    .await
+                    .ok()
+                    .and_then(|info| info.attribute_string(gio::FILE_ATTRIBUTE_FILESYSTEM_TYPE));
+                pane.imp()
+                    .portable_names
+                    .set(fs_type.is_some_and(|t| naming::needs_portable_names(&t)));
+            }
+        ));
+        imp.info_task.replace(Some(task));
+    }
+
+    fn set_writable(&self, writable: bool) {
+        let imp = self.imp();
+        imp.file_view
+            .set_accepts_drops(writable || imp.is_trash.get());
+        if imp.writable.replace(writable) != writable {
+            self.notify_writable();
+        }
     }
 
     // ── View options ───────────────────────────────────────────────────────
@@ -599,7 +888,11 @@ impl FolderPane {
         let page = &imp.status_page;
 
         let name = if let Some(err) = directory.error().filter(|_| !directory.loading()) {
-            let (icon, title) = if err.matches(gio::IOErrorEnum::PermissionDenied) {
+            let trash_unavailable =
+                err.matches(gio::IOErrorEnum::NotSupported) && imp.is_trash.get();
+            let (icon, title) = if trash_unavailable {
+                ("user-trash-symbolic", gettext("Trash Unavailable"))
+            } else if err.matches(gio::IOErrorEnum::PermissionDenied) {
                 ("action-unavailable-symbolic", gettext("Access Denied"))
             } else if err.matches(gio::IOErrorEnum::NotFound) {
                 ("folder-symbolic", gettext("Folder Not Found"))
@@ -610,7 +903,15 @@ impl FolderPane {
             };
             page.set_icon_name(Some(icon));
             page.set_title(&title);
-            page.set_description(Some(&glib::markup_escape_text(err.message())));
+            let description = if trash_unavailable {
+                gettext(
+                    "Browsing the Trash needs GVfs: install the “gvfs” package. \
+                     Moving files to the Trash and undoing it work without it.",
+                )
+            } else {
+                err.message().to_owned()
+            };
+            page.set_description(Some(&glib::markup_escape_text(&description)));
             "status"
         } else if visible > 0 {
             "view"

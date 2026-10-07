@@ -35,6 +35,12 @@ menu row_menu {
     }
 
     item {
+      label: _("_Empty Trash");
+      action: "sidebar.empty-trash";
+      hidden-when: "action-disabled";
+    }
+
+    item {
       label: _("_Eject");
       action: "sidebar.eject";
       hidden-when: "action-disabled";

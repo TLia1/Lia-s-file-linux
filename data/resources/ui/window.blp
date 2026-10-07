@@ -14,6 +14,8 @@ template $LiaWindow: Adw.ApplicationWindow {
     setters {
       split_view.collapsed: true;
       new_content.label: "";
+      restore_content.label: "";
+      empty_trash_content.label: "";
       sort_content.label: "";
       view_content.label: "";
       search_entry.width-request: 160;
@@ -63,6 +65,9 @@ template $LiaWindow: Adw.ApplicationWindow {
           primary: true;
           tooltip-text: _("Main Menu");
         }
+
+        [end]
+        $LiaOperationsButton operations_button {}
       }
 
       // ── Navigation: back / forward / up / refresh, address, search ────
@@ -131,7 +136,7 @@ template $LiaWindow: Adw.ApplicationWindow {
           "command-bar",
         ]
 
-        MenuButton {
+        MenuButton new_button {
           menu-model: new_menu;
           always-show-arrow: true;
           tooltip-text: _("Create a new item");
@@ -146,11 +151,44 @@ template $LiaWindow: Adw.ApplicationWindow {
           ]
         }
 
+        // Trash only
+        Button restore_button {
+          visible: false;
+          tooltip-text: _("Restore the selected items");
+          action-name: "win.restore";
+
+          child: Adw.ButtonContent restore_content {
+            icon-name: "edit-undo-symbolic";
+            label: _("Restore");
+          };
+
+          styles [
+            "flat",
+            "labeled",
+          ]
+        }
+
+        Button empty_trash_button {
+          visible: false;
+          tooltip-text: _("Permanently delete everything in the Trash");
+          action-name: "win.empty-trash";
+
+          child: Adw.ButtonContent empty_trash_content {
+            icon-name: "user-trash-full-symbolic";
+            label: _("Empty Trash");
+          };
+
+          styles [
+            "flat",
+            "labeled",
+          ]
+        }
+
         Separator {
           orientation: vertical;
         }
 
-        Button {
+        Button cut_button {
           icon-name: "edit-cut-symbolic";
           tooltip-text: _("Cut (Ctrl+X)");
           action-name: "win.cut";
@@ -170,7 +208,7 @@ template $LiaWindow: Adw.ApplicationWindow {
           ]
         }
 
-        Button {
+        Button paste_button {
           icon-name: "edit-paste-symbolic";
           tooltip-text: _("Paste (Ctrl+V)");
           action-name: "win.paste";
@@ -180,7 +218,7 @@ template $LiaWindow: Adw.ApplicationWindow {
           ]
         }
 
-        Button {
+        Button rename_button {
           icon-name: "document-edit-symbolic";
           tooltip-text: _("Rename (F2)");
           action-name: "win.rename";
@@ -190,10 +228,21 @@ template $LiaWindow: Adw.ApplicationWindow {
           ]
         }
 
-        Button {
+        Button trash_button {
           icon-name: "user-trash-symbolic";
           tooltip-text: _("Move to Trash (Delete)");
           action-name: "win.trash";
+
+          styles [
+            "flat",
+          ]
+        }
+
+        Button delete_button {
+          visible: false;
+          icon-name: "edit-delete-symbolic";
+          tooltip-text: _("Delete Permanently (Delete)");
+          action-name: "win.delete";
 
           styles [
             "flat",
@@ -489,6 +538,30 @@ menu view_menu {
 }
 
 menu more_menu {
+  section {
+    item {
+      label: _("_Undo");
+      action: "app.undo";
+    }
+
+    item {
+      label: _("_Redo");
+      action: "app.redo";
+    }
+  }
+
+  section {
+    item {
+      label: _("D_uplicate");
+      action: "win.duplicate";
+    }
+
+    item {
+      label: _("Create _Link");
+      action: "win.create-link";
+    }
+  }
+
   section {
     item {
       label: _("Select _All");

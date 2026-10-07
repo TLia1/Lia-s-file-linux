@@ -9,33 +9,29 @@
 use std::cell::{Cell, RefCell};
 
 use adw::prelude::*;
-use gtk::{gio, glib, glib::clone, subclass::prelude::*};
+use gettextrs::gettext;
+use gtk::{gdk, gio, glib, glib::clone, subclass::prelude::*};
 
 use crate::application::Application;
+use crate::dialogs;
 use crate::model::places;
+use crate::services::clipboard::clipboard_service;
+use crate::services::file_ops::{FileOpJob, JobState, Operation, queue};
+use crate::services::templates::templates_menu;
 use crate::util::settings;
 use crate::widgets::address_bar::AddressBar;
+use crate::widgets::dnd;
 use crate::widgets::folder_pane::{self, FolderPane};
+use crate::widgets::operations_popover::OperationsButton;
 use crate::widgets::sidebar::Sidebar;
 
 /// Sidebar width limits (pixels), matching the GSettings range.
 const SIDEBAR_MIN_WIDTH: f64 = 180.0;
 const SIDEBAR_MAX_WIDTH: f64 = 360.0;
 
-/// Actions of file operations that arrive in phase 3 (and properties in
-/// phase 6). They exist now so that buttons, menus and shortcuts are wired,
-/// but stay disabled until implemented.
-const PENDING_ACTIONS: [&str; 9] = [
-    "cut",
-    "copy",
-    "paste",
-    "rename",
-    "trash",
-    "delete",
-    "new-folder",
-    "new-file",
-    "properties",
-];
+/// Actions that arrive in later phases (properties in phase 6). They exist
+/// now so that buttons, menus and shortcuts are wired, but stay disabled.
+const PENDING_ACTIONS: [&str; 1] = ["properties"];
 
 /// The connections made to the active pane, undone when it changes.
 #[derive(Default)]
@@ -57,6 +53,8 @@ mod imp {
         #[template_child]
         pub(super) tab_view: TemplateChild<adw::TabView>,
         #[template_child]
+        pub(super) tab_bar: TemplateChild<adw::TabBar>,
+        #[template_child]
         pub(super) split_view: TemplateChild<adw::OverlaySplitView>,
         #[template_child]
         pub(super) sidebar: TemplateChild<Sidebar>,
@@ -72,6 +70,26 @@ mod imp {
         pub(super) selection_label: TemplateChild<gtk::Label>,
         #[template_child]
         pub(super) free_space_label: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub(super) new_menu: TemplateChild<gio::Menu>,
+        // Command bar buttons that change in the trash.
+        #[template_child]
+        pub(super) new_button: TemplateChild<gtk::MenuButton>,
+        #[template_child]
+        pub(super) restore_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub(super) empty_trash_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub(super) paste_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub(super) rename_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub(super) trash_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub(super) delete_button: TemplateChild<gtk::Button>,
+
+        /// Handlers on app-wide services, removed when the window goes.
+        pub(super) service_handlers: RefCell<Vec<(glib::Object, glib::SignalHandlerId)>>,
 
         pub(super) active: RefCell<ActivePane>,
         /// The tab whose context menu is open.
@@ -90,6 +108,7 @@ mod imp {
         fn class_init(klass: &mut Self::Class) {
             AddressBar::ensure_type();
             Sidebar::ensure_type();
+            OperationsButton::ensure_type();
             klass.bind_template();
         }
 
@@ -106,7 +125,14 @@ mod imp {
             obj.setup_shared_widgets();
             obj.setup_sidebar();
             obj.setup_actions();
+            obj.setup_file_operations();
             obj.restore_state();
+        }
+
+        fn dispose(&self) {
+            for (object, handler) in self.service_handlers.take() {
+                object.disconnect(handler);
+            }
         }
     }
 
@@ -178,7 +204,11 @@ impl Window {
     }
 
     pub fn show_toast(&self, message: &str) {
-        let toast = adw::Toast::builder().title(message).timeout(3).build();
+        let toast = adw::Toast::builder()
+            .title(message)
+            .use_markup(false)
+            .timeout(3)
+            .build();
         self.imp().toast_overlay.add_toast(toast);
     }
 
@@ -326,6 +356,16 @@ impl Window {
                 self,
                 move |_| window.update_selection_actions()
             )),
+            pane.connect_writable_notify(clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |_| window.update_selection_actions()
+            )),
+            pane.connect_is_trash_notify(clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |_| window.on_location_changed()
+            )),
             pane.connect_sort_changed(clone!(
                 #[weak(rename_to = window)]
                 self,
@@ -372,6 +412,17 @@ impl Window {
         self.set_action_enabled("back", pane.can_go_back());
         self.set_action_enabled("forward", pane.can_go_forward());
         self.set_action_enabled("up", pane.can_go_up());
+
+        // The trash has its own commands.
+        let trash = pane.is_trash();
+        imp.new_button.set_visible(!trash);
+        imp.paste_button.set_visible(!trash);
+        imp.rename_button.set_visible(!trash);
+        imp.trash_button.set_visible(!trash);
+        imp.restore_button.set_visible(trash);
+        imp.empty_trash_button.set_visible(trash);
+        imp.delete_button.set_visible(trash);
+        self.update_selection_actions();
     }
 
     fn sync_search_entry(&self, pane: &FolderPane) {
@@ -383,16 +434,40 @@ impl Window {
     }
 
     fn update_selection_actions(&self) {
-        let selected = self
-            .active_pane()
-            .map(|pane| pane.selected_items())
-            .unwrap_or_default();
+        let Some(pane) = self.active_pane() else {
+            return;
+        };
+        let selected = pane.selected_items();
+        let any = !selected.is_empty();
         let any_folder = selected.iter().any(|item| item.is_dir());
-        let all_folders = !selected.is_empty() && selected.iter().all(|item| item.is_dir());
-        self.set_action_enabled("open", !selected.is_empty());
+        let all_folders = any && selected.iter().all(|item| item.is_dir());
+        self.set_action_enabled("open", any);
         self.set_action_enabled("open-with", selected.iter().any(|item| !item.is_dir()));
         self.set_action_enabled("open-in-new-tab", any_folder);
         self.set_action_enabled("pin", all_folders);
+
+        // File operations depend on the folder being writable.
+        let writable = pane.writable();
+        let trash = pane.is_trash();
+        let removable = any && (writable || trash);
+        self.set_action_enabled("copy", any);
+        self.set_action_enabled("cut", removable);
+        self.set_action_enabled("trash", removable);
+        self.set_action_enabled("delete", removable);
+        self.set_action_enabled("rename", any && writable);
+        self.set_action_enabled("duplicate", any && writable);
+        self.set_action_enabled(
+            "create-link",
+            any && writable && selected.iter().all(|i| i.target_file().is_native()),
+        );
+        self.set_action_enabled("paste", writable && clipboard_service().has_files());
+        for name in ["new-folder", "new-file", "new-from-template"] {
+            self.set_action_enabled(name, writable);
+        }
+        self.set_action_enabled(
+            "restore",
+            trash && any && selected.iter().all(|i| i.trash_orig_path().is_some()),
+        );
     }
 
     fn sync_sort_actions(&self) {
@@ -465,6 +540,11 @@ impl Window {
     fn setup_sidebar(&self) {
         let imp = self.imp();
 
+        imp.sidebar.connect_drop_files(clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, dest, files, action| window.drop_files(dest, &files, action)
+        ));
         imp.sidebar.connect_open_location(clone!(
             #[weak(rename_to = window)]
             self,
@@ -582,6 +662,87 @@ impl Window {
             pane_action("select-all", FolderPane::select_all),
             pane_action("invert-selection", FolderPane::invert_selection),
             pane_action("copy-path", FolderPane::copy_path),
+            // File operations
+            window_action("cut", |window| window.copy_selection(true)),
+            window_action("copy", |window| window.copy_selection(false)),
+            window_action("paste", Self::paste),
+            pane_action("rename", FolderPane::start_rename),
+            window_action("trash", Self::trash_selection),
+            window_action("delete", Self::delete_selection),
+            pane_action("duplicate", |pane| {
+                let files = pane.selected_files();
+                pane.run_operation(Operation::Duplicate { files }, false);
+            }),
+            pane_action("create-link", |pane| {
+                let Some(location) = pane.location() else {
+                    return;
+                };
+                let pairs = pane
+                    .selected_files()
+                    .into_iter()
+                    .filter_map(|file| {
+                        let name = file.basename()?.to_string_lossy().into_owned();
+                        // Translators: name of a new symbolic link
+                        let link = gettext("Link to {}").replace("{}", &name);
+                        Some((file, location.child(link)))
+                    })
+                    .collect();
+                pane.run_operation(Operation::Link { pairs }, false);
+            }),
+            pane_action("new-folder", |pane| {
+                if let Some(parent) = pane.location() {
+                    let name = gettext("New Folder");
+                    pane.run_operation(Operation::CreateFolder { parent, name }, true);
+                }
+            }),
+            pane_action("new-file", |pane| {
+                if let Some(parent) = pane.location() {
+                    let name = gettext("New File");
+                    let template = None;
+                    pane.run_operation(
+                        Operation::CreateFile {
+                            parent,
+                            name,
+                            template,
+                        },
+                        true,
+                    );
+                }
+            }),
+            gio::ActionEntry::builder("new-from-template")
+                .parameter_type(Some(glib::VariantTy::STRING))
+                .activate(|window: &Self, _, parameter| {
+                    let (Some(pane), Some(uri)) = (
+                        window.active_pane(),
+                        parameter.and_then(|p| p.get::<String>()),
+                    ) else {
+                        return;
+                    };
+                    let template = gio::File::for_uri(&uri);
+                    let (Some(parent), Some(name)) = (pane.location(), template.basename()) else {
+                        return;
+                    };
+                    let name = name.to_string_lossy().into_owned();
+                    let template = Some(template);
+                    pane.run_operation(
+                        Operation::CreateFile {
+                            parent,
+                            name,
+                            template,
+                        },
+                        true,
+                    );
+                })
+                .build(),
+            pane_action("restore", |pane| {
+                let files = pane
+                    .selected_items()
+                    .iter()
+                    .map(|i| i.file().clone())
+                    .collect();
+                pane.run_operation(Operation::Restore { files }, false);
+            }),
+            window_action("empty-trash", Self::empty_trash),
             window_action("pin", |window| {
                 let folders: Vec<gio::File> = window
                     .active_pane()
@@ -698,6 +859,204 @@ impl Window {
         }
     }
 
+    // ── File operations ────────────────────────────────────────────────────
+
+    fn setup_file_operations(&self) {
+        let imp = self.imp();
+        imp.new_menu.append_section(None, &templates_menu());
+
+        let mut handlers: Vec<(glib::Object, glib::SignalHandlerId)> = Vec::new();
+        let clipboard = clipboard_service();
+        let handler = clipboard.connect_changed(clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_| window.update_selection_actions()
+        ));
+        handlers.push((clipboard.upcast(), handler));
+        let queue = queue();
+        let handler = queue.connect_job_finished(clone!(
+            #[weak(rename_to = window)]
+            self,
+            move |_, job| window.on_job_finished(job)
+        ));
+        handlers.push((queue.upcast(), handler));
+        imp.service_handlers.replace(handlers);
+
+        // Undo/redo in the bubble phase: text fields handle Ctrl+Z first.
+        let shortcuts = gtk::ShortcutController::new();
+        shortcuts.set_propagation_phase(gtk::PropagationPhase::Bubble);
+        for (trigger, action) in [
+            ("<Control>z", "app.undo"),
+            ("<Control>y", "app.redo"),
+            ("<Control><Shift>z", "app.redo"),
+        ] {
+            shortcuts.add_shortcut(gtk::Shortcut::new(
+                gtk::ShortcutTrigger::parse_string(trigger),
+                Some(gtk::NamedAction::new(action)),
+            ));
+        }
+        self.add_controller(shortcuts);
+
+        // Files dropped on a tab go to its folder.
+        let tab_bar = &imp.tab_bar;
+        tab_bar.setup_extra_drop_target(dnd::ACTIONS, &[gdk::FileList::static_type()]);
+        tab_bar.connect_extra_drag_value(|tab_bar, page, value| {
+            let files = value
+                .and_then(|v| v.get::<gdk::FileList>().ok())
+                .map(|list| list.files())
+                .unwrap_or_default();
+            tab_drop_action(tab_bar, page, &files).unwrap_or(gdk::DragAction::COPY)
+        });
+        tab_bar.connect_extra_drag_drop(|tab_bar, page, value| {
+            let Ok(list) = value.get::<gdk::FileList>() else {
+                return false;
+            };
+            let files = list.files();
+            let (Some(action), Some(pane)) = (
+                tab_drop_action(tab_bar, page, &files),
+                page.child().downcast::<FolderPane>().ok(),
+            ) else {
+                return false;
+            };
+            if let Some(dest) = pane.location() {
+                pane.drop_files(&dest, &files, action);
+            }
+            true
+        });
+    }
+
+    /// Puts the selection on the clipboard.
+    fn copy_selection(&self, cut: bool) {
+        let files = self
+            .active_pane()
+            .map(|pane| pane.selected_files())
+            .unwrap_or_default();
+        if !files.is_empty() {
+            clipboard_service().set(&files, cut);
+        }
+    }
+
+    /// Pastes files from the clipboard into the current folder.
+    fn paste(&self) {
+        let Some(pane) = self.active_pane() else {
+            return;
+        };
+        let Some(dest) = pane.location() else {
+            return;
+        };
+        glib::spawn_future_local(async move {
+            let clipboard = clipboard_service();
+            let Some((cut, files)) = clipboard.read().await else {
+                return;
+            };
+            if files.is_empty() {
+                return;
+            }
+            let operation = if cut {
+                Operation::move_into(&files, &dest)
+            } else {
+                Operation::copy_into(&files, &dest)
+            };
+            pane.run_operation(operation, false);
+            if cut {
+                // The files won't be where the clipboard says anymore.
+                clipboard.clear_cut();
+            }
+        });
+    }
+
+    /// Delete: to the trash, or permanently when already in the trash.
+    fn trash_selection(&self) {
+        let Some(pane) = self.active_pane() else {
+            return;
+        };
+        if pane.is_trash() {
+            self.delete_selection();
+            return;
+        }
+        let files = pane.selected_files();
+        if !files.is_empty() {
+            pane.run_operation(Operation::Trash { files }, false);
+        }
+    }
+
+    /// Shift+Delete: permanently, after confirmation.
+    fn delete_selection(&self) {
+        let Some(pane) = self.active_pane() else {
+            return;
+        };
+        let items = pane.selected_items();
+        let Some(first) = items.first() else {
+            return;
+        };
+        let name = first.display_name().to_string();
+        let files: Vec<gio::File> = if pane.is_trash() {
+            items.iter().map(|i| i.file().clone()).collect()
+        } else {
+            pane.selected_files()
+        };
+        glib::spawn_future_local(clone!(
+            #[weak(rename_to = window)]
+            self,
+            async move {
+                if dialogs::file_ops::confirm_delete(&window, files.len(), &name).await {
+                    pane.run_operation(Operation::Delete { files }, false);
+                }
+            }
+        ));
+    }
+
+    fn empty_trash(&self) {
+        glib::spawn_future_local(clone!(
+            #[weak(rename_to = window)]
+            self,
+            async move {
+                if dialogs::file_ops::confirm_empty_trash(&window).await {
+                    queue().submit(Operation::EmptyTrash, Some(&window));
+                }
+            }
+        ));
+    }
+
+    /// Files dropped on the sidebar.
+    fn drop_files(&self, dest: &gio::File, files: &[gio::File], action: gdk::DragAction) {
+        if let Some(pane) = self.active_pane() {
+            pane.drop_files(dest, files, action);
+        }
+    }
+
+    /// Announces finished jobs started from this window.
+    fn on_job_finished(&self, job: &FileOpJob) {
+        let origin = job.origin().and_then(|widget| widget.root());
+        if origin.as_ref() != Some(self.upcast_ref::<gtk::Root>()) {
+            return;
+        }
+        let toast = match job.state() {
+            JobState::Done => {
+                let Some(message) = job.done_message() else {
+                    return;
+                };
+                let toast = adw::Toast::builder()
+                    .title(message)
+                    .use_markup(false)
+                    .timeout(5)
+                    .build();
+                if job.is_undoable() {
+                    toast.set_button_label(Some(&gettext("_Undo")));
+                    toast.set_action_name(Some("app.undo"));
+                }
+                toast
+            }
+            JobState::Failed => adw::Toast::builder()
+                .title(gettext("Failed: {}").replace("{}", &job.error()))
+                .use_markup(false)
+                .timeout(5)
+                .build(),
+            _ => return,
+        };
+        self.imp().toast_overlay.add_toast(toast);
+    }
+
     fn open_selection_in_new_tabs(&self) {
         let Some(pane) = self.active_pane() else {
             return;
@@ -735,6 +1094,25 @@ impl Window {
         let _ = settings.set_int("window-height", height);
         let _ = settings.set_boolean("is-maximized", self.is_maximized());
     }
+}
+
+/// The action for files dragged over a tab (into its folder), or `None`
+/// if they can't be dropped there.
+fn tab_drop_action(
+    tab_bar: &adw::TabBar,
+    page: &adw::TabPage,
+    files: &[gio::File],
+) -> Option<gdk::DragAction> {
+    let pane = page.child().downcast::<FolderPane>().ok()?;
+    let dest = pane.location()?;
+    if !pane.writable() && !pane.is_trash() {
+        return None;
+    }
+    let first = files.first()?;
+    let action = dnd::action_for(files, &dest, dnd::current_modifiers(tab_bar), || {
+        dnd::same_device(first, &dest)
+    });
+    (!action.is_empty()).then_some(action)
 }
 
 /// Keeps a tab's title, icon, tooltip and spinner in sync with its pane.

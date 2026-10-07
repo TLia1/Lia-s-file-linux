@@ -19,6 +19,7 @@ adw = { version = "0.9", package = "libadwaita", features = ["v1_8"] }
 gettext-rs = { version = "0.8", features = ["gettext-system"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+async-channel = "2"
 
 [build-dependencies]
 glib-build-tools = "0.22"

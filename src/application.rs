@@ -5,6 +5,8 @@ use gettextrs::gettext;
 use gtk::{gio, glib, subclass::prelude::*};
 
 use crate::config;
+use crate::services::file_ops::queue;
+use crate::services::undo::undo_manager;
 use crate::util::settings;
 use crate::window::Window;
 
@@ -196,8 +198,29 @@ impl Application {
             gio::ActionEntry::builder("about")
                 .activate(|app: &Self, _, _| app.show_about())
                 .build(),
+            // Undo/redo act on the file system, so they're app-wide. Their
+            // shortcuts are set per window (see `Window`), after text
+            // fields had a chance to handle them.
+            gio::ActionEntry::builder("undo")
+                .activate(|app: &Self, _, _| {
+                    queue().undo(app.active_window().as_ref());
+                })
+                .build(),
+            gio::ActionEntry::builder("redo")
+                .activate(|app: &Self, _, _| {
+                    queue().redo(app.active_window().as_ref());
+                })
+                .build(),
         ]);
         self.add_action(&settings().create_action("restore-session"));
+        let undo = undo_manager();
+        for (name, property) in [("undo", "can-undo"), ("redo", "can-redo")] {
+            if let Some(action) = self.lookup_action(name) {
+                undo.bind_property(property, &action, "enabled")
+                    .sync_create()
+                    .build();
+            }
+        }
     }
 
     fn setup_accels(&self) {

@@ -8,8 +8,12 @@
 //! The list is rebuilt from scratch whenever bookmarks or mounts change;
 //! there are only a few dozen rows. The row matching the active tab's
 //! folder is highlighted.
+//!
+//! Files dropped on an entry are emitted as `drop-files` (dropping on the
+//! Trash trashes them); hovering an entry during a drag opens it.
 
 use std::cell::{Cell, OnceCell, RefCell};
+use std::rc::Rc;
 use std::sync::OnceLock;
 
 use gettextrs::gettext;
@@ -17,6 +21,7 @@ use gtk::{gdk, gio, glib, glib::clone, prelude::*, subclass::prelude::*};
 
 use crate::model::places::{self, Bookmark};
 use crate::util::format;
+use crate::widgets::dnd;
 use crate::widgets::folder_pane::display_name;
 
 const TRASH_URI: &str = "trash:///";
@@ -88,6 +93,10 @@ impl Place {
     }
 }
 
+/// During a drag: the row under the pointer, and whether the dragged files
+/// are on its device (once known).
+type Hovered = Option<(i32, Option<bool>)>;
+
 fn is_network(file: &gio::File) -> bool {
     file.uri_scheme()
         .is_some_and(|scheme| NETWORK_SCHEMES.contains(&scheme.as_str()))
@@ -145,6 +154,14 @@ mod imp {
                     // (location, in a new tab)
                     glib::subclass::Signal::builder("open-location")
                         .param_types([gio::File::static_type(), bool::static_type()])
+                        .build(),
+                    // (destination folder, files, action)
+                    glib::subclass::Signal::builder("drop-files")
+                        .param_types([
+                            gio::File::static_type(),
+                            gdk::FileList::static_type(),
+                            gdk::DragAction::static_type(),
+                        ])
                         .build(),
                 ]
             })
@@ -234,6 +251,7 @@ impl Sidebar {
         menu.set_parent(self);
         imp.menu.set(menu).unwrap();
         self.setup_actions();
+        self.setup_drop_target();
 
         // Mounts and volumes.
         let monitor = gio::VolumeMonitor::get();
@@ -329,6 +347,15 @@ impl Sidebar {
                     move |_, _, _| sidebar.unpin_menu_row()
                 ))
                 .build(),
+            gio::ActionEntry::builder("empty-trash")
+                .activate(clone!(
+                    #[weak(rename_to = sidebar)]
+                    self,
+                    move |_, _, _| {
+                        let _ = sidebar.activate_action("win.empty-trash", None);
+                    }
+                ))
+                .build(),
             gio::ActionEntry::builder("eject")
                 .activate(clone!(
                     #[weak(rename_to = sidebar)]
@@ -364,6 +391,24 @@ impl Sidebar {
                 sidebar.reload_bookmarks();
             }
         ));
+    }
+
+    pub fn connect_drop_files<
+        F: Fn(&Self, &gio::File, Vec<gio::File>, gdk::DragAction) + 'static,
+    >(
+        &self,
+        f: F,
+    ) -> glib::SignalHandlerId {
+        self.connect_closure(
+            "drop-files",
+            false,
+            glib::closure_local!(move |sidebar: &Self,
+                                       dest: &gio::File,
+                                       files: &gdk::FileList,
+                                       action: gdk::DragAction| {
+                f(sidebar, dest, files.files(), action)
+            }),
+        )
     }
 
     pub fn connect_open_location<F: Fn(&Self, &gio::File, bool) + 'static>(
@@ -668,6 +713,151 @@ impl Sidebar {
         ));
     }
 
+    // ── Drag and drop ──────────────────────────────────────────────────────
+
+    fn setup_drop_target(&self) {
+        let list_box = &self.imp().list_box;
+        let target = gtk::DropTarget::new(gdk::FileList::static_type(), dnd::ACTIONS);
+        target.set_preload(true);
+        // The hovered row, whether the files are on its device, and the
+        // timer that opens it.
+        let hovered: Rc<Cell<Hovered>> = Rc::default();
+        let spring: Rc<RefCell<Option<glib::SourceId>>> = Rc::default();
+        let stop = clone!(
+            #[weak]
+            list_box,
+            #[strong]
+            hovered,
+            #[strong]
+            spring,
+            move || {
+                list_box.drag_unhighlight_row();
+                hovered.set(None);
+                if let Some(id) = spring.take() {
+                    id.remove();
+                }
+            }
+        );
+
+        target.connect_motion(clone!(
+            #[weak(rename_to = sidebar)]
+            self,
+            #[strong]
+            hovered,
+            #[strong]
+            spring,
+            #[upgrade_or]
+            gdk::DragAction::empty(),
+            move |target, _, y| {
+                let list_box = &sidebar.imp().list_box;
+                let Some((row, dest)) = sidebar.drop_destination(y) else {
+                    list_box.drag_unhighlight_row();
+                    hovered.set(None);
+                    if let Some(id) = spring.take() {
+                        id.remove();
+                    }
+                    return gdk::DragAction::empty();
+                };
+                if hovered.get().map(|(index, _)| index) != Some(row.index()) {
+                    list_box.drag_highlight_row(&row);
+                    hovered.set(Some((row.index(), None)));
+                    if let Some(id) = spring.take() {
+                        id.remove();
+                    }
+                    let id = glib::timeout_add_local_once(
+                        dnd::SPRING_DELAY,
+                        clone!(
+                            #[weak]
+                            sidebar,
+                            #[strong]
+                            spring,
+                            #[strong]
+                            dest,
+                            move || {
+                                spring.take();
+                                if !dnd::is_trash(&dest) {
+                                    sidebar.emit_open(&dest, false);
+                                }
+                            }
+                        ),
+                    );
+                    spring.replace(Some(id));
+                }
+                sidebar.drop_action(target, &dest, &hovered)
+            }
+        ));
+        target.connect_leave(clone!(
+            #[strong]
+            stop,
+            move |_| stop()
+        ));
+        target.connect_drop(clone!(
+            #[weak(rename_to = sidebar)]
+            self,
+            #[strong]
+            hovered,
+            #[upgrade_or]
+            false,
+            move |target, value, _, y| {
+                let action = sidebar
+                    .drop_destination(y)
+                    .map(|(_, dest)| (sidebar.drop_action(target, &dest, &hovered), dest));
+                stop();
+                let (Ok(files), Some((action, dest))) = (value.get::<gdk::FileList>(), action)
+                else {
+                    return false;
+                };
+                if action.is_empty() {
+                    return false;
+                }
+                sidebar.emit_by_name::<()>("drop-files", &[&dest, &files, &action]);
+                true
+            }
+        ));
+        list_box.add_controller(target);
+    }
+
+    /// The entry under `y` that files can be dropped on, and its folder.
+    fn drop_destination(&self, y: f64) -> Option<(gtk::ListBoxRow, gio::File)> {
+        let row = self.imp().list_box.row_at_y(y as i32)?;
+        let dest = self
+            .imp()
+            .places
+            .borrow()
+            .get(row.index() as usize)?
+            .location()?;
+        if matches!(dest.uri_scheme().as_deref(), Some("recent" | "network")) {
+            return None;
+        }
+        Some((row, dest))
+    }
+
+    fn drop_action(
+        &self,
+        target: &gtk::DropTarget,
+        dest: &gio::File,
+        hovered: &Cell<Hovered>,
+    ) -> gdk::DragAction {
+        let files = target
+            .value()
+            .and_then(|v| v.get::<gdk::FileList>().ok())
+            .map(|list| list.files())
+            .unwrap_or_default();
+        let Some(first) = files.first() else {
+            return gdk::DragAction::COPY;
+        };
+        dnd::action_for(&files, dest, target.current_event_state(), || {
+            if let Some((_, Some(same))) = hovered.get() {
+                return same;
+            }
+            let same = dnd::same_device(first, dest);
+            if let Some((index, _)) = hovered.get() {
+                hovered.set(Some((index, Some(same))));
+            }
+            same
+        })
+    }
+
     // ── Actions ────────────────────────────────────────────────────────────
 
     fn activate(&self, index: usize, new_tab: bool) {
@@ -781,6 +971,10 @@ impl Sidebar {
         set_enabled(
             "unpin",
             place.as_ref().is_some_and(|p| p.bookmark_uri.is_some()),
+        );
+        set_enabled(
+            "empty-trash",
+            place.as_ref().is_some_and(|p| p.section == Section::Trash),
         );
         set_enabled(
             "eject",

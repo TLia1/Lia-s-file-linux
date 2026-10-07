@@ -167,6 +167,26 @@ impl FileItem {
         self.set_property("thumbnail", texture);
     }
 
+    /// The file that operations (copy, drag…) act on: the target of a
+    /// shortcut entry (in `recent://`, `network://`), or the file itself.
+    pub fn target_file(&self) -> gio::File {
+        self.target_uri()
+            .map_or_else(|| self.file().clone(), |uri| gio::File::for_uri(&uri))
+    }
+
+    /// For items in the trash: where they were deleted from.
+    pub fn trash_orig_path(&self) -> Option<PathBuf> {
+        self.info()
+            .attribute_byte_string(gio::FILE_ATTRIBUTE_TRASH_ORIG_PATH)
+            .map(|path| PathBuf::from(path.as_str()))
+    }
+
+    /// For items in the trash: when they were deleted (ISO 8601, local time).
+    pub fn trash_deletion_date(&self) -> Option<glib::GString> {
+        self.info()
+            .attribute_string(gio::FILE_ATTRIBUTE_TRASH_DELETION_DATE)
+    }
+
     /// For shortcut entries (e.g. in `network://`), the location they point to.
     pub fn target_uri(&self) -> Option<glib::GString> {
         self.info()

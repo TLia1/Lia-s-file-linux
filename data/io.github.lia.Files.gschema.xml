@@ -57,5 +57,13 @@
       <default>true</default>
       <summary>List folders before files</summary>
     </key>
+
+    <!-- File operations -->
+    <key name="jobs-per-device" type="i">
+      <range min="1" max="8"/>
+      <default>1</default>
+      <summary>File operations run at the same time on one device</summary>
+      <description>Copies and moves to the same drive run one after another by default, which is fastest on most disks. Operations on different drives always run in parallel.</description>
+    </key>
   </schema>
 </schemalist>

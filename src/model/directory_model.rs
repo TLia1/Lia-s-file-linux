@@ -19,8 +19,8 @@ use gtk::{gio, glib, glib::clone, prelude::*, subclass::prelude::*};
 use super::FileItem;
 
 /// Attributes queried for every file.
-pub const ATTRIBUTES: &str =
-    "standard::*,time::modified,time::created,unix::mode,owner::user,thumbnail::*";
+pub const ATTRIBUTES: &str = "standard::*,time::modified,time::created,unix::mode,owner::user,\
+                              thumbnail::*,trash::orig-path,trash::deletion-date";
 
 const BATCH_SIZE: i32 = 500;
 /// While loading, enumerated items are published to the model (and thus the
@@ -195,6 +195,12 @@ impl DirectoryModel {
         if imp.loading.get() {
             self.set_loading(false);
         }
+    }
+
+    /// Whether changes are followed live. Unmonitored folders must be
+    /// reloaded after an operation changes them.
+    pub fn is_monitored(&self) -> bool {
+        self.imp().monitor.borrow().is_some()
     }
 
     /// Finds an item by its `gio::File`.

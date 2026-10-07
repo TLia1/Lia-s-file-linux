@@ -1,0 +1,117 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $LiaConflictDialog: Adw.AlertDialog {
+  default-response: "replace";
+  close-response: "cancel";
+  prefer-wide-layout: true;
+
+  responses [
+    cancel: _("_Cancel"),
+    skip: _("_Skip"),
+    keep: _("_Keep Both"),
+    replace: _("_Replace") destructive,
+  ]
+
+  extra-child: Box {
+    orientation: vertical;
+    spacing: 12;
+
+    // Side-by-side comparison: what's there, what would replace it.
+    Box {
+      spacing: 12;
+      homogeneous: true;
+
+      Box {
+        orientation: vertical;
+        spacing: 4;
+
+        styles [
+          "card",
+          "conflict-side",
+        ]
+
+        Label {
+          label: _("Existing");
+          xalign: 0;
+
+          styles [
+            "caption-heading",
+            "dim-label",
+          ]
+        }
+
+        Image target_image {
+          pixel-size: 64;
+          margin-top: 4;
+          margin-bottom: 4;
+        }
+
+        Label target_size {
+          ellipsize: end;
+
+          styles [
+            "numeric",
+          ]
+        }
+
+        Label target_date {
+          ellipsize: end;
+
+          styles [
+            "numeric",
+            "caption",
+          ]
+        }
+      }
+
+      Box {
+        orientation: vertical;
+        spacing: 4;
+
+        styles [
+          "card",
+          "conflict-side",
+        ]
+
+        Label source_heading {
+          label: _("Replace With");
+          xalign: 0;
+
+          styles [
+            "caption-heading",
+            "dim-label",
+          ]
+        }
+
+        Image source_image {
+          pixel-size: 64;
+          margin-top: 4;
+          margin-bottom: 4;
+        }
+
+        Label source_size {
+          ellipsize: end;
+
+          styles [
+            "numeric",
+          ]
+        }
+
+        Label source_date {
+          ellipsize: end;
+
+          styles [
+            "numeric",
+            "caption",
+          ]
+        }
+      }
+    }
+
+    CheckButton apply_all {
+      label: _("_Do this for all conflicts");
+      use-underline: true;
+    }
+  };
+}

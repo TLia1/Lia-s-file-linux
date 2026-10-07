@@ -1,0 +1,406 @@
+//! What a file operation does, how it asks the user for decisions, and how
+//! its progress is shared with the UI.
+//!
+//! Everything here is `Send`: operations run on a worker thread (see
+//! [`super::engine`]) while the UI thread watches the [`Control`].
+
+use std::path::PathBuf;
+use std::sync::{Condvar, Mutex};
+
+use gtk::{gio, prelude::*};
+
+use crate::services::undo::UndoRecord;
+
+/// A file operation. Transfers take `(source, target)` pairs where the
+/// target is the exact path to create; conflicts may change it.
+#[derive(Clone, Debug)]
+pub enum Operation {
+    Copy {
+        pairs: Vec<(gio::File, gio::File)>,
+    },
+    Move {
+        pairs: Vec<(gio::File, gio::File)>,
+    },
+    /// Creates symbolic links: each target points to its source.
+    Link {
+        pairs: Vec<(gio::File, gio::File)>,
+    },
+    /// Copies each file next to itself as "name (copy).ext".
+    Duplicate {
+        files: Vec<gio::File>,
+    },
+    Trash {
+        files: Vec<gio::File>,
+    },
+    /// Permanent, recursive deletion.
+    Delete {
+        files: Vec<gio::File>,
+    },
+    /// Moves files out of the trash. Accepts `trash:///` items or the
+    /// original locations of trashed files.
+    Restore {
+        files: Vec<gio::File>,
+    },
+    EmptyTrash,
+    Rename {
+        file: gio::File,
+        name: String,
+    },
+    /// Creates `name` in `parent`, numbered if it exists.
+    CreateFolder {
+        parent: gio::File,
+        name: String,
+    },
+    /// Creates an empty file, or a copy of `template`.
+    CreateFile {
+        parent: gio::File,
+        name: String,
+        template: Option<gio::File>,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OpKind {
+    Copy,
+    Move,
+    Link,
+    Duplicate,
+    Trash,
+    Delete,
+    Restore,
+    EmptyTrash,
+    Rename,
+    CreateFolder,
+    CreateFile,
+}
+
+impl Operation {
+    /// Copies `sources` into the folder `destination`.
+    pub fn copy_into(sources: &[gio::File], destination: &gio::File) -> Self {
+        Self::Copy {
+            pairs: pairs_into(sources, destination),
+        }
+    }
+
+    /// Moves `sources` into the folder `destination`.
+    pub fn move_into(sources: &[gio::File], destination: &gio::File) -> Self {
+        Self::Move {
+            pairs: pairs_into(sources, destination),
+        }
+    }
+
+    /// Links `sources` into the folder `destination`.
+    pub fn link_into(sources: &[gio::File], destination: &gio::File) -> Self {
+        Self::Link {
+            pairs: pairs_into(sources, destination),
+        }
+    }
+
+    pub fn kind(&self) -> OpKind {
+        match self {
+            Self::Copy { .. } => OpKind::Copy,
+            Self::Move { .. } => OpKind::Move,
+            Self::Link { .. } => OpKind::Link,
+            Self::Duplicate { .. } => OpKind::Duplicate,
+            Self::Trash { .. } => OpKind::Trash,
+            Self::Delete { .. } => OpKind::Delete,
+            Self::Restore { .. } => OpKind::Restore,
+            Self::EmptyTrash => OpKind::EmptyTrash,
+            Self::Rename { .. } => OpKind::Rename,
+            Self::CreateFolder { .. } => OpKind::CreateFolder,
+            Self::CreateFile { .. } => OpKind::CreateFile,
+        }
+    }
+
+    /// The files the operation reads from (or acts on).
+    pub fn sources(&self) -> Vec<gio::File> {
+        match self {
+            Self::Copy { pairs } | Self::Move { pairs } | Self::Link { pairs } => {
+                pairs.iter().map(|(s, _)| s.clone()).collect()
+            }
+            Self::Duplicate { files }
+            | Self::Trash { files }
+            | Self::Delete { files }
+            | Self::Restore { files } => files.clone(),
+            Self::Rename { file, .. } => vec![file.clone()],
+            Self::EmptyTrash | Self::CreateFolder { .. } | Self::CreateFile { .. } => Vec::new(),
+        }
+    }
+
+    /// The folder written to, when there is a single one.
+    pub fn destination(&self) -> Option<gio::File> {
+        match self {
+            Self::Copy { pairs } | Self::Move { pairs } | Self::Link { pairs } => {
+                let parent = pairs.first()?.1.parent()?;
+                pairs
+                    .iter()
+                    .all(|(_, t)| t.has_parent(Some(&parent)))
+                    .then_some(parent)
+            }
+            Self::CreateFolder { parent, .. } | Self::CreateFile { parent, .. } => {
+                Some(parent.clone())
+            }
+            Self::Duplicate { files } => {
+                let parent = files.first()?.parent()?;
+                files
+                    .iter()
+                    .all(|f| f.has_parent(Some(&parent)))
+                    .then_some(parent)
+            }
+            Self::Rename { file, .. } => file.parent(),
+            _ => None,
+        }
+    }
+
+    /// Number of top-level items, for messages.
+    pub fn item_count(&self) -> usize {
+        match self {
+            Self::Copy { pairs } | Self::Move { pairs } | Self::Link { pairs } => pairs.len(),
+            Self::Duplicate { files }
+            | Self::Trash { files }
+            | Self::Delete { files }
+            | Self::Restore { files } => files.len(),
+            Self::EmptyTrash => 0,
+            Self::Rename { .. } | Self::CreateFolder { .. } | Self::CreateFile { .. } => 1,
+        }
+    }
+
+    /// Small, metadata-only operations that don't wait in the queue or
+    /// show up in the operations popover.
+    pub fn is_quick(&self) -> bool {
+        matches!(
+            self.kind(),
+            OpKind::Rename | OpKind::CreateFolder | OpKind::CreateFile | OpKind::Link
+        )
+    }
+}
+
+fn pairs_into(sources: &[gio::File], destination: &gio::File) -> Vec<(gio::File, gio::File)> {
+    sources
+        .iter()
+        .filter_map(|source| {
+            let name = source.basename()?;
+            Some((source.clone(), destination.child(name)))
+        })
+        .collect()
+}
+
+// ── Questions asked to the user ────────────────────────────────────────────
+
+/// What the conflict dialog shows about one side of a conflict.
+#[derive(Clone, Debug, Default)]
+pub struct FileSummary {
+    pub uri: String,
+    pub name: String,
+    pub size: u64,
+    /// UNIX timestamp, 0 if unknown.
+    pub modified: i64,
+    pub is_dir: bool,
+    pub content_type: Option<String>,
+    /// A cached freedesktop thumbnail, if one exists.
+    pub thumbnail: Option<PathBuf>,
+}
+
+/// A target that already exists.
+#[derive(Clone, Debug)]
+pub struct Conflict {
+    pub source: FileSummary,
+    pub target: FileSummary,
+    /// Display name of the folder containing the target.
+    pub folder_name: String,
+    /// Both are folders: "Replace" merges them.
+    pub is_merge: bool,
+    /// False when a file and a folder clash: only Skip / Keep both apply.
+    pub can_replace: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConflictChoice {
+    /// Overwrite the target (or merge, for two folders).
+    Replace,
+    Skip,
+    /// Give the new item a numbered name.
+    KeepBoth,
+    Cancel,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ConflictResponse {
+    pub choice: ConflictChoice,
+    /// Use the same answer for the remaining conflicts of this job.
+    pub apply_to_all: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ErrorKind {
+    Generic,
+    /// The file system has no trash; offer to delete permanently.
+    TrashUnsupported,
+}
+
+/// A per-file failure.
+#[derive(Clone, Debug)]
+pub struct OpError {
+    pub kind: ErrorKind,
+    pub file_name: String,
+    pub message: String,
+    /// Retrying can't help (e.g. moving a folder into itself).
+    pub fatal: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ErrorChoice {
+    Retry,
+    Skip,
+    Cancel,
+    /// Only for [`ErrorKind::TrashUnsupported`].
+    DeletePermanently,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ErrorResponse {
+    pub choice: ErrorChoice,
+    /// For Skip and DeletePermanently: don't ask again in this job.
+    pub apply_to_all: bool,
+}
+
+/// Answers the questions a running operation asks. Called from the worker
+/// thread, which blocks until the answer comes back.
+pub trait Interaction: Send + Sync {
+    fn conflict(&self, conflict: &Conflict) -> ConflictResponse;
+    fn error(&self, error: &OpError) -> ErrorResponse;
+}
+
+/// Gives the same answer to every question (tests, scripted use).
+#[derive(Debug, Clone, Copy)]
+pub struct FixedAnswers {
+    pub conflict: ConflictChoice,
+    pub error: ErrorChoice,
+}
+
+impl Interaction for FixedAnswers {
+    fn conflict(&self, _: &Conflict) -> ConflictResponse {
+        ConflictResponse {
+            choice: self.conflict,
+            apply_to_all: true,
+        }
+    }
+
+    fn error(&self, _: &OpError) -> ErrorResponse {
+        ErrorResponse {
+            choice: self.error,
+            apply_to_all: true,
+        }
+    }
+}
+
+// ── Progress & control ─────────────────────────────────────────────────────
+
+/// A snapshot of a job's progress.
+#[derive(Clone, Debug, Default)]
+pub struct Progress {
+    /// Still counting the files to process.
+    pub scanning: bool,
+    pub bytes_total: u64,
+    pub bytes_done: u64,
+    pub files_total: u64,
+    pub files_done: u64,
+    /// Display name of the file being processed.
+    pub current: String,
+}
+
+impl Progress {
+    /// Fraction done, or `None` if unknown.
+    pub fn fraction(&self) -> Option<f64> {
+        if self.scanning {
+            None
+        } else if self.bytes_total > 0 {
+            Some((self.bytes_done as f64 / self.bytes_total as f64).min(1.0))
+        } else if self.files_total > 0 {
+            Some((self.files_done as f64 / self.files_total as f64).min(1.0))
+        } else {
+            None
+        }
+    }
+}
+
+/// Shared between the worker running an operation and the UI: progress,
+/// pause and cancellation.
+#[derive(Default)]
+pub struct Control {
+    cancellable: gio::Cancellable,
+    paused: Mutex<bool>,
+    resumed: Condvar,
+    progress: Mutex<Progress>,
+}
+
+impl Control {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn cancellable(&self) -> &gio::Cancellable {
+        &self.cancellable
+    }
+
+    pub fn cancel(&self) {
+        self.cancellable.cancel();
+        // Wake a paused worker so that it notices.
+        let _guard = self.paused.lock().unwrap();
+        self.resumed.notify_all();
+    }
+
+    pub fn is_cancelled(&self) -> bool {
+        self.cancellable.is_cancelled()
+    }
+
+    pub fn set_paused(&self, paused: bool) {
+        *self.paused.lock().unwrap() = paused;
+        self.resumed.notify_all();
+    }
+
+    pub fn is_paused(&self) -> bool {
+        *self.paused.lock().unwrap()
+    }
+
+    /// Blocks the calling (worker) thread while paused.
+    pub fn wait_while_paused(&self) {
+        let mut paused = self.paused.lock().unwrap();
+        while *paused && !self.cancellable.is_cancelled() {
+            paused = self.resumed.wait(paused).unwrap();
+        }
+    }
+
+    pub fn progress(&self) -> Progress {
+        self.progress.lock().unwrap().clone()
+    }
+
+    pub fn update(&self, f: impl FnOnce(&mut Progress)) {
+        f(&mut self.progress.lock().unwrap());
+    }
+}
+
+// ── Result ─────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Status {
+    /// Finished, possibly with skipped items.
+    Done,
+    Cancelled,
+}
+
+#[derive(Debug)]
+pub struct Outcome {
+    pub status: Status,
+    /// How to revert what was actually done, if anything was.
+    pub undo: Option<UndoRecord>,
+    /// The items created or moved into place (top level), e.g. to select
+    /// them afterwards.
+    pub created: Vec<gio::File>,
+    /// Messages of the errors that led to skipped items.
+    pub errors: Vec<String>,
+    /// Number of items skipped (by conflicts or errors).
+    pub skipped: u32,
+    /// Number of top-level items processed successfully.
+    pub succeeded: u32,
+}
