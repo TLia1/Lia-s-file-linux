@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="lia-files">
+  <enum id="io.github.lia.Files.ViewMode">
+    <value nick="details" value="0"/>
+    <value nick="grid" value="1"/>
+  </enum>
+
+  <schema id="io.github.lia.Files" path="/io/github/lia/Files/">
+    <!-- Window state -->
+    <key name="window-width" type="i">
+      <default>1200</default>
+      <summary>Window width</summary>
+    </key>
+    <key name="window-height" type="i">
+      <default>760</default>
+      <summary>Window height</summary>
+    </key>
+    <key name="is-maximized" type="b">
+      <default>false</default>
+      <summary>Whether the window is maximized</summary>
+    </key>
+    <key name="sidebar-width" type="i">
+      <range min="180" max="360"/>
+      <default>220</default>
+      <summary>Width of the navigation pane</summary>
+    </key>
+
+    <!-- Views -->
+    <key name="default-view" enum="io.github.lia.Files.ViewMode">
+      <default>'details'</default>
+      <summary>Default view mode</summary>
+    </key>
+    <key name="icon-size" type="i">
+      <range min="32" max="256"/>
+      <default>96</default>
+      <summary>Icon size in grid view, in pixels</summary>
+    </key>
+    <key name="show-hidden" type="b">
+      <default>false</default>
+      <summary>Show hidden files</summary>
+    </key>
+    <key name="sort-folders-first" type="b">
+      <default>true</default>
+      <summary>List folders before files</summary>
+    </key>
+  </schema>
+</schemalist>

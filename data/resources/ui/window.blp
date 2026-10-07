@@ -1,0 +1,66 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $LiaWindow: Adw.ApplicationWindow {
+  default-width: 1200;
+  default-height: 760;
+  width-request: 360;
+  height-request: 294;
+  title: _("Files");
+
+  content: Adw.ToastOverlay toast_overlay {
+    Adw.ToolbarView {
+      top-bar-style: raised;
+
+      [top]
+      Adw.HeaderBar header_bar {
+        title-widget: Adw.WindowTitle window_title {
+          title: _("Files");
+        };
+
+        [end]
+        MenuButton {
+          icon-name: "open-menu-symbolic";
+          menu-model: primary_menu;
+          primary: true;
+          tooltip-text: _("Main Menu");
+        }
+      }
+
+      content: Adw.Bin pane_bin {};
+    }
+  };
+}
+
+menu primary_menu {
+  section {
+    item {
+      label: _("_New Window");
+      action: "app.new-window";
+    }
+  }
+
+  section {
+    item {
+      label: _("Show _Hidden Files");
+      action: "win.show-hidden";
+    }
+
+    item {
+      label: _("Sort _Folders Before Files");
+      action: "win.sort-folders-first";
+    }
+  }
+
+  section {
+    item {
+      label: _("_Keyboard Shortcuts");
+      action: "app.shortcuts";
+    }
+
+    item {
+      label: _("_About Files");
+      action: "app.about";
+    }
+  }
+}

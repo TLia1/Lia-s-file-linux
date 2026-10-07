@@ -1,0 +1,173 @@
+/* Lia Files — a light "Fluent" layer on top of libadwaita.
+ * Only libadwaita named colours are used, so light/dark/accent changes are
+ * automatic. Spacing follows a 4 px grid. */
+
+/* ── Navigation row (back/forward/up, address bar, search) ───────────────── */
+
+.nav-row {
+  padding: 6px 8px;
+  border-spacing: 4px;
+}
+
+.nav-row > button,
+.nav-row > .linked > button {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 6px;
+}
+
+.nav-row > searchentry {
+  min-height: 32px;
+  border-radius: 6px;
+}
+
+/* ── Address bar / breadcrumbs ───────────────────────────────────────────── */
+
+.address-bar {
+  min-height: 32px;
+  border-radius: 6px;
+  background-color: alpha(currentColor, 0.08);
+  padding: 0 2px;
+}
+
+.address-bar:hover {
+  background-color: alpha(currentColor, 0.11);
+}
+
+.address-bar entry {
+  min-height: 32px;
+  border-radius: 6px;
+}
+
+breadcrumbs button.crumb {
+  min-height: 28px;
+  padding: 0 8px;
+  margin: 2px 0;
+  border-radius: 6px;
+  font-weight: normal;
+}
+
+breadcrumbs button.crumb.current {
+  font-weight: 600;
+}
+
+breadcrumbs .crumb-separator {
+  opacity: 0.45;
+  margin: 0 1px;
+}
+
+/* ── File area ───────────────────────────────────────────────────────────── */
+
+.file-view {
+  background-color: var(--view-bg-color);
+}
+
+/* Details view: subtle headers, no grid lines, no zebra stripes */
+columnview.details-view {
+  background-color: transparent;
+}
+
+columnview.details-view > header > button {
+  border: none;
+  box-shadow: none;
+  padding: 4px 12px;
+  font-size: 0.9em;
+  color: alpha(currentColor, 0.6);
+  background: none;
+}
+
+columnview.details-view > header > button:hover {
+  color: currentColor;
+  background-color: alpha(currentColor, 0.05);
+}
+
+columnview.details-view > listview {
+  padding: 0 4px 8px 4px;
+}
+
+columnview.details-view > listview > row {
+  min-height: 32px;
+  border-radius: 6px;
+  padding: 0;
+  transition: background-color 150ms ease-out;
+}
+
+columnview.details-view > listview > row > cell {
+  padding: 0 12px;
+}
+
+/* Hover: accent at 6 %. Selection: accent at 15 % + 3 px pill on the left. */
+columnview.details-view > listview > row:hover,
+gridview.grid-view > child:hover {
+  background-color: alpha(var(--accent-bg-color), 0.06);
+}
+
+columnview.details-view > listview > row:selected {
+  background-color: alpha(var(--accent-bg-color), 0.15);
+  color: inherit;
+  box-shadow: inset 3px 0 0 0 var(--accent-bg-color);
+}
+
+columnview.details-view > listview > row:selected:hover {
+  background-color: alpha(var(--accent-bg-color), 0.20);
+}
+
+columnview.details-view > listview:focus-visible > row:focus-visible,
+gridview.grid-view:focus-visible > child:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
+}
+
+/* Secondary text (dates, types, sizes). Don't restyle libadwaita's
+ * .dim-label: it already uses opacity, and stacking both made small text
+ * so faint that thin strokes looked cut off. */
+.secondary {
+  color: alpha(currentColor, 0.7);
+}
+
+.numeric {
+  font-feature-settings: "tnum";
+}
+
+/* Grid view */
+gridview.grid-view {
+  background-color: transparent;
+  padding: 8px;
+}
+
+gridview.grid-view > child {
+  border-radius: 8px;
+  padding: 8px 4px;
+  margin: 2px;
+  transition: background-color 150ms ease-out;
+}
+
+gridview.grid-view > child:selected {
+  background-color: alpha(var(--accent-bg-color), 0.15);
+  color: inherit;
+}
+
+gridview.grid-view > child:selected:hover {
+  background-color: alpha(var(--accent-bg-color), 0.20);
+}
+
+/* ── Status bar ──────────────────────────────────────────────────────────── */
+
+.status-bar {
+  padding: 2px 12px 2px 16px;
+  min-height: 28px;
+  font-size: 0.9em;
+  border-spacing: 12px;
+}
+
+.status-bar > label {
+  color: alpha(currentColor, 0.7);
+}
+
+.status-bar button {
+  min-width: 26px;
+  min-height: 22px;
+  padding: 0 4px;
+  border-radius: 4px;
+}

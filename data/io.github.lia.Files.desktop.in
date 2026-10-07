@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=Lia Files
+GenericName=File Manager
+Comment=Browse and organize your files
+Exec=lia-files %U
+Icon=io.github.lia.Files
+Terminal=false
+Type=Application
+Categories=GTK;GNOME;Utility;Core;FileManager;
+Keywords=folder;manager;explore;disk;filesystem;
+MimeType=inode/directory;
+StartupNotify=true
+DBusActivatable=false

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.lia.Files</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Lia Files</name>
+  <summary>Browse and organize your files</summary>
+  <description>
+    <p>
+      A clean, modern file manager with a tidy command bar, breadcrumb
+      address bar, tabs and a details pane.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.lia.Files.desktop</launchable>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-10-07"/>
+  </releases>
+</component>

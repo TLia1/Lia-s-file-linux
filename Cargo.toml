@@ -1,0 +1,31 @@
+[package]
+name = "lia-files"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+rust-version = "1.88"
+
+[lib]
+name = "lia_files"
+path = "src/lib.rs"
+
+[[bin]]
+name = "lia-files"
+path = "src/main.rs"
+
+[dependencies]
+gtk = { version = "0.11", package = "gtk4", features = ["v4_20"] }
+adw = { version = "0.9", package = "libadwaita", features = ["v1_8"] }
+gettext-rs = { version = "0.8", features = ["gettext-system"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[build-dependencies]
+glib-build-tools = "0.22"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+lto = true
+codegen-units = 1

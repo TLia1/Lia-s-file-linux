@@ -1,0 +1,41 @@
+using Gtk 4.0;
+
+template $LiaAddressBar: Widget {
+  hexpand: true;
+
+  Stack stack {
+    transition-type: crossfade;
+    transition-duration: 150;
+    hhomogeneous: false;
+    interpolate-size: true;
+
+    StackPage {
+      name: "crumbs";
+
+      child: Box crumbs_frame {
+        styles [
+          "address-bar",
+        ]
+
+        $LiaCrumbsBox crumbs {
+          hexpand: true;
+          valign: center;
+        }
+      };
+    }
+
+    StackPage {
+      name: "entry";
+
+      child: Entry entry {
+        hexpand: true;
+        input-purpose: url;
+        placeholder-text: _("Enter a location");
+      };
+    }
+  }
+
+  accessibility {
+    label: _("Location");
+  }
+}

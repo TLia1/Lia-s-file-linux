@@ -1,0 +1,120 @@
+using Gtk 4.0;
+using Adw 1;
+
+Adw.ShortcutsDialog shortcuts_dialog {
+  Adw.ShortcutsSection {
+    title: _("Navigation");
+
+    Adw.ShortcutsItem {
+      title: _("Back");
+      accelerator: "<Alt>Left";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Forward");
+      accelerator: "<Alt>Right";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Up");
+      accelerator: "<Alt>Up";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Home folder");
+      accelerator: "<Alt>Home";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Edit location");
+      accelerator: "<Control>l <Alt>d";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Search");
+      accelerator: "<Control>f <Control>e";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Refresh");
+      accelerator: "F5";
+    }
+  }
+
+  Adw.ShortcutsSection {
+    title: _("View");
+
+    Adw.ShortcutsItem {
+      title: _("Details view");
+      accelerator: "<Control>1";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Grid view");
+      accelerator: "<Control>2";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Zoom in");
+      accelerator: "<Control>plus";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Zoom out");
+      accelerator: "<Control>minus";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Reset zoom");
+      accelerator: "<Control>0";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Show hidden files");
+      accelerator: "<Control>h";
+    }
+  }
+
+  Adw.ShortcutsSection {
+    title: _("Files");
+
+    Adw.ShortcutsItem {
+      title: _("Open");
+      accelerator: "Return";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Copy path");
+      accelerator: "<Control><Shift>c";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Select all");
+      accelerator: "<Control>a";
+    }
+  }
+
+  Adw.ShortcutsSection {
+    title: _("General");
+
+    Adw.ShortcutsItem {
+      title: _("New window");
+      accelerator: "<Control>n";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Close window");
+      accelerator: "<Control>w";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Keyboard shortcuts");
+      accelerator: "<Control>question";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Quit");
+      accelerator: "<Control>q";
+    }
+  }
+}

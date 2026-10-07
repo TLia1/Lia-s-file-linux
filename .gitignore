@@ -1,0 +1,7 @@
+/target
+/build
+/_build
+/.flatpak-builder
+/.flatpak
+*.ui.tmp
+/.idea
