@@ -17,6 +17,7 @@ use crate::model::{FileItem, sorting};
 use crate::services::clipboard::clipboard_service;
 use crate::util::format;
 use crate::widgets::dnd;
+use crate::widgets::thumbnail_image::ThumbnailImage;
 
 /// Grid icon sizes cycled through by zooming.
 pub const ICON_SIZES: [i32; 3] = [48, 96, 160];
@@ -686,10 +687,11 @@ impl FileView {
             self,
             move |_, list_item| {
                 let list_item = list_item.downcast_ref::<gtk::ListItem>().unwrap();
-                let image = gtk::Image::builder()
-                    .pixel_size(icon_size)
-                    .halign(gtk::Align::Center)
-                    .build();
+                let image = ThumbnailImage::new(icon_size);
+                image.set_halign(gtk::Align::Center);
+                image.set_valign(gtk::Align::End);
+                // Thumbnails aren't square: keep names aligned.
+                image.set_height_request(icon_size);
                 let label = gtk::Label::builder()
                     .wrap(true)
                     .wrap_mode(gtk::pango::WrapMode::WordChar)
@@ -719,12 +721,23 @@ impl FileView {
             ) else {
                 return;
             };
-            let image = cell.first_child().and_downcast::<gtk::Image>().unwrap();
+            let image = cell.first_child().and_downcast::<ThumbnailImage>().unwrap();
             let label = cell.last_child().and_downcast::<gtk::Label>().unwrap();
-            image.set_from_gicon(&item.icon().unwrap_or_else(fallback_icon));
+            image.set_item(Some(&item));
             label.set_label(&item.display_name());
             style_item(&cell, &item);
             cell.set_tooltip_text(Some(&item.display_name()));
+        });
+        // Unbound cells stop waiting for their thumbnail.
+        factory.connect_unbind(|_, list_item| {
+            let list_item = list_item.downcast_ref::<gtk::ListItem>().unwrap();
+            if let Some(image) = list_item
+                .child()
+                .and_then(|cell| cell.first_child())
+                .and_downcast::<ThumbnailImage>()
+            {
+                image.set_item(None);
+            }
         });
         factory.connect_teardown(clone!(
             #[weak(rename_to = view)]
@@ -864,15 +877,7 @@ impl FileView {
                     return None;
                 }
                 if let Some(item) = list_item.item().and_downcast::<FileItem>() {
-                    let icon = item.icon().unwrap_or_else(fallback_icon);
-                    let paintable = gtk::IconTheme::for_display(&view.display()).lookup_by_gicon(
-                        &icon,
-                        48,
-                        view.scale_factor(),
-                        gtk::TextDirection::None,
-                        gtk::IconLookupFlags::empty(),
-                    );
-                    source.set_icon(Some(&paintable), 12, 12);
+                    source.set_icon(Some(&view.drag_icon(&item)), 12, 12);
                 }
                 Some(gdk::ContentProvider::for_value(
                     &gdk::FileList::from_array(&files).to_value(),
@@ -880,6 +885,31 @@ impl FileView {
             }
         ));
         widget.add_controller(source);
+    }
+
+    /// The picture under the pointer while dragging: the item's thumbnail
+    /// or icon.
+    fn drag_icon(&self, item: &FileItem) -> gdk::Paintable {
+        const SIZE: f64 = 64.0;
+        if let Some(thumbnail) = item.thumbnail() {
+            let (width, height) = (thumbnail.width() as f64, thumbnail.height() as f64);
+            let scale = SIZE / width.max(height).max(1.0);
+            let snapshot = gtk::Snapshot::new();
+            thumbnail.snapshot(&snapshot, width * scale, height * scale);
+            if let Some(paintable) = snapshot.to_paintable(None) {
+                return paintable;
+            }
+        }
+        let icon = item.icon().unwrap_or_else(fallback_icon);
+        gtk::IconTheme::for_display(&self.display())
+            .lookup_by_gicon(
+                &icon,
+                48,
+                self.scale_factor(),
+                gtk::TextDirection::None,
+                gtk::IconLookupFlags::empty(),
+            )
+            .upcast()
     }
 
     /// The action for a drop on `dest`: from the modifiers held, and

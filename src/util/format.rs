@@ -83,6 +83,20 @@ pub fn date(unix: i64) -> String {
     date_relative_to(&date, &now)
 }
 
+/// The full date and time, e.g. "8 October 2026, 14:02" (details pane).
+pub fn full_date(unix: i64) -> String {
+    if unix <= 0 {
+        return String::new();
+    }
+    let Ok(date) = glib::DateTime::from_unix_local(unix) else {
+        return String::new();
+    };
+    // Translators: a full date and time, in strftime format
+    date.format(&gettext("%-d %B %Y, %H:%M"))
+        .map(String::from)
+        .unwrap_or_default()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -5,6 +5,12 @@
     <value nick="grid" value="1"/>
   </enum>
 
+  <enum id="io.github.lia.Files.ThumbnailPolicy">
+    <value nick="always" value="0"/>
+    <value nick="local-only" value="1"/>
+    <value nick="never" value="2"/>
+  </enum>
+
   <schema id="io.github.lia.Files" path="/io/github/lia/Files/">
     <!-- Window state -->
     <key name="window-width" type="i">
@@ -56,6 +62,26 @@
     <key name="sort-folders-first" type="b">
       <default>true</default>
       <summary>List folders before files</summary>
+    </key>
+
+    <!-- Thumbnails & details pane -->
+    <key name="thumbnail-policy" enum="io.github.lia.Files.ThumbnailPolicy">
+      <default>'local-only'</default>
+      <summary>Which files get thumbnails</summary>
+      <description>Thumbnails already in the shared cache are always used; this decides which files new thumbnails are made for.</description>
+    </key>
+    <key name="thumbnail-max-size" type="u">
+      <default>256</default>
+      <summary>Largest file to make a thumbnail for, in megabytes</summary>
+    </key>
+    <key name="show-details-pane" type="b">
+      <default>false</default>
+      <summary>Show the details pane</summary>
+    </key>
+    <key name="details-pane-width" type="i">
+      <range min="220" max="480"/>
+      <default>300</default>
+      <summary>Width of the details pane</summary>
     </key>
 
     <!-- File operations -->

@@ -20,14 +20,15 @@ use crate::services::file_ops::{FileOpJob, JobState, Operation, queue};
 use crate::services::templates::templates_menu;
 use crate::util::settings;
 use crate::widgets::address_bar::AddressBar;
+use crate::widgets::details_pane::DetailsPane;
 use crate::widgets::dnd;
 use crate::widgets::folder_pane::{self, FolderPane};
 use crate::widgets::operations_popover::OperationsButton;
 use crate::widgets::sidebar::Sidebar;
 
-/// Sidebar width limits (pixels), matching the GSettings range.
-const SIDEBAR_MIN_WIDTH: f64 = 180.0;
-const SIDEBAR_MAX_WIDTH: f64 = 360.0;
+/// Pane width limits (pixels), matching the GSettings ranges.
+const SIDEBAR_WIDTH: (f64, f64) = (180.0, 360.0);
+const DETAILS_PANE_WIDTH: (f64, f64) = (220.0, 480.0);
 
 /// Actions that arrive in later phases (properties in phase 6). They exist
 /// now so that buttons, menus and shortcuts are wired, but stay disabled.
@@ -60,6 +61,12 @@ mod imp {
         pub(super) sidebar: TemplateChild<Sidebar>,
         #[template_child]
         pub(super) sidebar_handle: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub(super) details_split: TemplateChild<adw::OverlaySplitView>,
+        #[template_child]
+        pub(super) details_pane: TemplateChild<DetailsPane>,
+        #[template_child]
+        pub(super) details_handle: TemplateChild<gtk::Box>,
         #[template_child]
         pub(super) address_bar: TemplateChild<AddressBar>,
         #[template_child]
@@ -108,6 +115,7 @@ mod imp {
         fn class_init(klass: &mut Self::Class) {
             AddressBar::ensure_type();
             Sidebar::ensure_type();
+            DetailsPane::ensure_type();
             OperationsButton::ensure_type();
             klass.bind_template();
         }
@@ -124,6 +132,7 @@ mod imp {
             obj.setup_tabs();
             obj.setup_shared_widgets();
             obj.setup_sidebar();
+            obj.setup_details_pane();
             obj.setup_actions();
             obj.setup_file_operations();
             obj.restore_state();
@@ -392,6 +401,7 @@ impl Window {
         self.sync_search_entry(&pane);
         self.update_selection_actions();
         self.sync_sort_actions();
+        imp.details_pane.set_folder_pane(Some(&pane));
         pane.grab_focus();
     }
 
@@ -562,52 +572,76 @@ impl Window {
             }
         ));
 
-        // Drag the handle on the sidebar's edge to resize it.
+        self.setup_resize_handle(
+            &imp.sidebar_handle,
+            &imp.split_view,
+            SIDEBAR_WIDTH,
+            "sidebar-width",
+        );
+    }
+
+    fn setup_details_pane(&self) {
+        let imp = self.imp();
+        settings()
+            .bind("show-details-pane", &*imp.details_split, "show-sidebar")
+            .build();
+        self.setup_resize_handle(
+            &imp.details_handle,
+            &imp.details_split,
+            DETAILS_PANE_WIDTH,
+            "details-pane-width",
+        );
+    }
+
+    /// Dragging `handle` (on the inner edge of a split view's sidebar)
+    /// resizes the sidebar; the width is saved to the settings `key`.
+    fn setup_resize_handle(
+        &self,
+        handle: &gtk::Box,
+        split_view: &adw::OverlaySplitView,
+        limits: (f64, f64),
+        key: &'static str,
+    ) {
+        set_pane_width(split_view, settings().int(key) as f64, limits);
         let drag = gtk::GestureDrag::new();
         let start_width = std::rc::Rc::new(Cell::new(0.0));
         drag.connect_drag_begin(clone!(
-            #[weak(rename_to = window)]
-            self,
+            #[weak]
+            split_view,
             #[strong]
             start_width,
-            move |_, _, _| start_width.set(window.imp().split_view.max_sidebar_width())
+            move |_, _, _| start_width.set(split_view.max_sidebar_width())
         ));
         drag.connect_drag_update(clone!(
             #[weak(rename_to = window)]
             self,
+            #[weak]
+            split_view,
             #[strong]
             start_width,
             move |_, dx, _| {
-                let dx = if window.direction() == gtk::TextDirection::Rtl {
-                    -dx
-                } else {
-                    dx
-                };
-                window.set_sidebar_width(start_width.get() + dx);
+                // Dragging away from the pane's outer edge widens it.
+                let at_start = split_view.sidebar_position() == gtk::PackType::Start;
+                let rtl = window.direction() == gtk::TextDirection::Rtl;
+                let dx = if at_start != rtl { dx } else { -dx };
+                set_pane_width(&split_view, start_width.get() + dx, limits);
             }
         ));
         drag.connect_drag_end(clone!(
-            #[weak(rename_to = window)]
-            self,
+            #[weak]
+            split_view,
             move |_, _, _| {
-                let width = window.imp().split_view.max_sidebar_width();
-                let _ = settings().set_int("sidebar-width", width.round() as i32);
+                let width = split_view.max_sidebar_width();
+                let _ = settings().set_int(key, width.round() as i32);
             }
         ));
-        imp.sidebar_handle.add_controller(drag);
-        imp.sidebar_handle.set_cursor_from_name(Some("col-resize"));
-        imp.split_view
-            .bind_property("collapsed", &*imp.sidebar_handle, "visible")
+        handle.add_controller(drag);
+        handle.set_cursor_from_name(Some("col-resize"));
+        split_view
+            .bind_property("collapsed", handle, "visible")
             .invert_boolean()
             .sync_create()
             .build();
-    }
-
-    fn set_sidebar_width(&self, width: f64) {
-        let split_view = &self.imp().split_view;
-        let width = width.clamp(SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH);
-        split_view.set_min_sidebar_width(width);
-        split_view.set_max_sidebar_width(width);
     }
 
     // ── Actions ────────────────────────────────────────────────────────────
@@ -833,6 +867,11 @@ impl Window {
         self.add_action(&gio::PropertyAction::new(
             "toggle-sidebar",
             &*self.imp().split_view,
+            "show-sidebar",
+        ));
+        self.add_action(&gio::PropertyAction::new(
+            "toggle-details-pane",
+            &*self.imp().details_split,
             "show-sidebar",
         ));
 
@@ -1084,7 +1123,6 @@ impl Window {
         if settings.boolean("is-maximized") {
             self.maximize();
         }
-        self.set_sidebar_width(settings.int("sidebar-width") as f64);
     }
 
     fn save_state(&self) {
@@ -1094,6 +1132,13 @@ impl Window {
         let _ = settings.set_int("window-height", height);
         let _ = settings.set_boolean("is-maximized", self.is_maximized());
     }
+}
+
+/// Sets the width of a split view's sidebar, within `limits`.
+fn set_pane_width(split_view: &adw::OverlaySplitView, width: f64, (min, max): (f64, f64)) {
+    let width = width.clamp(min, max);
+    split_view.set_min_sidebar_width(width);
+    split_view.set_max_sidebar_width(width);
 }
 
 /// The action for files dragged over a tab (into its folder), or `None`

@@ -232,6 +232,7 @@ impl Application {
             ("win.new-tab", &["<Control>t"]),
             ("win.close-tab", &["<Control>w"]),
             ("win.toggle-sidebar", &["F9"]),
+            ("win.toggle-details-pane", &["<Alt><Shift>p", "<Alt>p"]),
             ("win.invert-selection", &["<Control><Shift>i"]),
             ("win.new-folder", &["<Control><Shift>n"]),
             ("win.back", &["<Alt>Left", "Back"]),

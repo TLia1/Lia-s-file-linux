@@ -134,6 +134,20 @@ impl FileItem {
             .unwrap_or(0)
     }
 
+    /// Creation time as a UNIX timestamp, if the file system records it.
+    pub fn created(&self) -> Option<i64> {
+        let info = self.info();
+        info.has_attribute(gio::FILE_ATTRIBUTE_TIME_CREATED)
+            .then(|| info.attribute_uint64(gio::FILE_ATTRIBUTE_TIME_CREATED))
+            .and_then(|time| time.try_into().ok())
+    }
+
+    /// Where a symbolic link points.
+    pub fn symlink_target(&self) -> Option<PathBuf> {
+        let info = self.info();
+        info.is_symlink().then(|| info.symlink_target()).flatten()
+    }
+
     pub fn content_type(&self) -> Option<glib::GString> {
         self.info().content_type()
     }

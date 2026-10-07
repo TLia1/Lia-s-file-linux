@@ -354,3 +354,42 @@ progressbar.job-progress > trough > progress {
 .conflict-side {
   padding: 12px;
 }
+
+/* ── Thumbnails ──────────────────────────────────────────────────────────── */
+
+@keyframes thumbnail-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+thumbnail-image > image.thumbnail {
+  -gtk-icon-shadow: 0 1px 3px var(--shade-color);
+}
+
+thumbnail-image > image.fade-in {
+  animation: thumbnail-fade-in 200ms ease-out;
+}
+
+/* ── Details pane ────────────────────────────────────────────────────────── */
+
+lia-details-pane {
+  background-color: var(--sidebar-bg-color);
+}
+
+lia-details-pane .title-4 {
+  font-weight: 600;
+}
+
+scrolledwindow.text-preview {
+  border-radius: 8px;
+  background-color: var(--view-bg-color);
+  box-shadow: 0 0 0 1px alpha(currentColor, 0.1);
+}
+
+scrolledwindow.text-preview textview {
+  font-size: 0.85em;
+}
+
+list.details-properties > row.property {
+  min-height: 0;
+}

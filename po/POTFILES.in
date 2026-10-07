@@ -13,3 +13,4 @@ src/widgets/file_view/mod.rs
 src/widgets/folder_pane/mod.rs
 src/widgets/sidebar/mod.rs
 src/window/mod.rs
+src/widgets/details_pane/mod.rs

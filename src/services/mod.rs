@@ -3,4 +3,5 @@
 pub mod clipboard;
 pub mod file_ops;
 pub mod templates;
+pub mod thumbnails;
 pub mod undo;

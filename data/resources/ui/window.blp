@@ -13,6 +13,8 @@ template $LiaWindow: Adw.ApplicationWindow {
 
     setters {
       split_view.collapsed: true;
+      details_split.collapsed: true;
+      details_content.label: "";
       new_content.label: "";
       restore_content.label: "";
       empty_trash_content.label: "";
@@ -292,6 +294,25 @@ template $LiaWindow: Adw.ApplicationWindow {
             "flat",
           ]
         }
+
+        Box {
+          hexpand: true;
+        }
+
+        ToggleButton {
+          tooltip-text: _("Details Pane (Alt+Shift+P)");
+          action-name: "win.toggle-details-pane";
+
+          child: Adw.ButtonContent details_content {
+            icon-name: "lia-details-pane-symbolic";
+            label: _("Details");
+          };
+
+          styles [
+            "flat",
+            "labeled",
+          ]
+        }
       }
 
       // ── Sidebar | tabs ─────────────────────────────────────────────────
@@ -316,8 +337,33 @@ template $LiaWindow: Adw.ApplicationWindow {
           }
         };
 
-        content: Adw.TabView tab_view {
-          menu-model: tab_menu;
+        // ── Tabs | details pane ──────────────────────────────────────────
+        content: Adw.OverlaySplitView details_split {
+          sidebar-position: end;
+          show-sidebar: false;
+          sidebar-width-unit: px;
+          min-sidebar-width: 300;
+          max-sidebar-width: 300;
+          sidebar-width-fraction: 1;
+
+          content: Adw.TabView tab_view {
+            menu-model: tab_menu;
+          };
+
+          sidebar: Overlay {
+            child: $LiaDetailsPane details_pane {};
+
+            [overlay]
+            Box details_handle {
+              halign: start;
+              width-request: 6;
+              tooltip-text: _("Drag to resize");
+
+              styles [
+                "sidebar-handle",
+              ]
+            }
+          };
         };
       };
 
@@ -533,6 +579,11 @@ menu view_menu {
     item {
       label: _("_Navigation Pane");
       action: "win.toggle-sidebar";
+    }
+
+    item {
+      label: _("D_etails Pane");
+      action: "win.toggle-details-pane";
     }
   }
 }

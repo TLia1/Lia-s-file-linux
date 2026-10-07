@@ -1,0 +1,77 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $LiaDetailsPane: Widget {
+  ScrolledWindow {
+    hscrollbar-policy: never;
+
+    Box {
+      orientation: vertical;
+      margin-top: 16;
+      margin-bottom: 16;
+      margin-start: 16;
+      margin-end: 16;
+
+      Stack preview_stack {
+        vhomogeneous: false;
+        transition-type: crossfade;
+        transition-duration: 150;
+
+        StackPage {
+          name: "image";
+
+          child: $LiaThumbnailImage preview_image {
+            pixel-size: 200;
+            halign: center;
+            margin-top: 8;
+            margin-bottom: 8;
+          };
+        }
+
+        StackPage {
+          name: "text";
+
+          child: ScrolledWindow text_scroller {
+            height-request: 280;
+            overflow: hidden;
+
+            styles [
+              "text-preview",
+            ]
+          };
+        }
+      }
+
+      Label name_label {
+        wrap: true;
+        wrap-mode: word_char;
+        justify: center;
+        margin-top: 12;
+
+        styles [
+          "title-4",
+        ]
+      }
+
+      Label type_label {
+        wrap: true;
+        justify: center;
+        margin-top: 2;
+
+        styles [
+          "secondary",
+        ]
+      }
+
+      ListBox properties_list {
+        selection-mode: none;
+        margin-top: 16;
+
+        styles [
+          "boxed-list",
+          "details-properties",
+        ]
+      }
+    }
+  }
+}

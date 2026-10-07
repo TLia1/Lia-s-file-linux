@@ -131,8 +131,14 @@ mod imp {
     impl ObjectImpl for FolderPane {
         fn signals() -> &'static [glib::subclass::Signal] {
             static SIGNALS: OnceLock<Vec<glib::subclass::Signal>> = OnceLock::new();
-            // The sort column or order changed (menu or column header).
-            SIGNALS.get_or_init(|| vec![glib::subclass::Signal::builder("sort-changed").build()])
+            SIGNALS.get_or_init(|| {
+                vec![
+                    // The sort column or order changed (menu or column header).
+                    glib::subclass::Signal::builder("sort-changed").build(),
+                    // The selected items (or the items themselves) changed.
+                    glib::subclass::Signal::builder("selection-changed").build(),
+                ]
+            })
         }
 
         fn constructed(&self) {
@@ -250,6 +256,7 @@ impl FolderPane {
                 pane.update_content_page();
                 pane.update_status();
                 pane.apply_pending_selection(false);
+                pane.emit_by_name::<()>("selection-changed", &[]);
             }
         ));
         imp.file_view.connect_sort_changed(clone!(
@@ -260,7 +267,10 @@ impl FolderPane {
         selection.connect_selection_changed(clone!(
             #[weak(rename_to = pane)]
             self,
-            move |_, _, _| pane.update_status()
+            move |_, _, _| {
+                pane.update_status();
+                pane.emit_by_name::<()>("selection-changed", &[]);
+            }
         ));
 
         imp.file_view.connect_item_activated(clone!(
@@ -832,6 +842,14 @@ impl FolderPane {
     pub fn connect_sort_changed<F: Fn(&Self) + 'static>(&self, f: F) -> glib::SignalHandlerId {
         self.connect_closure(
             "sort-changed",
+            false,
+            glib::closure_local!(move |pane: &Self| f(pane)),
+        )
+    }
+
+    pub fn connect_selection_changed<F: Fn(&Self) + 'static>(&self, f: F) -> glib::SignalHandlerId {
+        self.connect_closure(
+            "selection-changed",
             false,
             glib::closure_local!(move |pane: &Self| f(pane)),
         )
