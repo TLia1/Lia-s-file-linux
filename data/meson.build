@@ -1,5 +1,13 @@
+# The full path, so that the launcher works when the install's bin folder
+# isn't in the session's PATH (e.g. a --prefix=~/.local install).
+desktop_conf = configuration_data()
+desktop_conf.set('bindir', bindir)
 desktop_file = i18n.merge_file(
-  input: app_id + '.desktop.in',
+  input: configure_file(
+    input: app_id + '.desktop.in.in',
+    output: app_id + '.desktop.in',
+    configuration: desktop_conf,
+  ),
   output: app_id + '.desktop',
   type: 'desktop',
   po_dir: '../po',

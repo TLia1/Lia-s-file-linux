@@ -2,7 +2,7 @@
 Name=Lia Files
 GenericName=File Manager
 Comment=Browse and organize your files
-Exec=lia-files %U
+Exec=@bindir@/lia-files %U
 Icon=io.github.lia.Files
 Terminal=false
 Type=Application
