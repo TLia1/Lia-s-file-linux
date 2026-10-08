@@ -2,41 +2,133 @@ using Gtk 4.0;
 using Adw 1;
 
 template $LiaFolderPane: Widget {
-  Stack content_stack {
-    vexpand: true;
-    hexpand: true;
-    transition-type: crossfade;
-    transition-duration: 150;
+  Box {
+    orientation: vertical;
 
-    styles [
-      "file-view",
-    ]
+    // ── Search bar: subfolders + filter chips, shown while searching ─────
+    Revealer search_revealer {
+      transition-type: slide_down;
+      transition-duration: 150;
 
-    StackPage {
-      name: "view";
-
-      child: $LiaFileView file_view {};
-    }
-
-    StackPage {
-      name: "loading";
-
-      child: Adw.Spinner {
-        halign: center;
-        valign: center;
-        width-request: 32;
-        height-request: 32;
-      };
-    }
-
-    StackPage {
-      name: "status";
-
-      child: Adw.StatusPage status_page {
+      child: Box {
         styles [
-          "compact",
+          "search-bar",
         ]
+
+        Button subfolders_button {
+          action-name: "search.subfolders";
+          tooltip-text: _("Search this folder and all its subfolders (Enter)");
+
+          child: Adw.ButtonContent {
+            icon-name: "system-search-symbolic";
+            label: _("Search in Subfolders");
+          };
+
+          styles [
+            "flat",
+          ]
+        }
+
+        Box search_status {
+          visible: false;
+          spacing: 8;
+          margin-start: 8;
+          margin-end: 8;
+
+          Adw.Spinner search_spinner {}
+
+          Label search_status_label {
+            styles [
+              "secondary",
+            ]
+          }
+        }
+
+        Separator {
+          orientation: vertical;
+        }
+
+        MenuButton kind_button {
+          always-show-arrow: true;
+          tooltip-text: _("Filter by kind");
+
+          styles [
+            "flat",
+            "filter-chip",
+          ]
+        }
+
+        MenuButton date_button {
+          always-show-arrow: true;
+          tooltip-text: _("Filter by date modified");
+
+          styles [
+            "flat",
+            "filter-chip",
+          ]
+        }
+
+        MenuButton size_button {
+          always-show-arrow: true;
+          tooltip-text: _("Filter by size");
+
+          styles [
+            "flat",
+            "filter-chip",
+          ]
+        }
+
+        Box {
+          hexpand: true;
+        }
+
+        Button clear_filters_button {
+          label: _("Clear Filters");
+          action-name: "search.clear-filters";
+
+          styles [
+            "flat",
+          ]
+        }
       };
+    }
+
+    Stack content_stack {
+      vexpand: true;
+      hexpand: true;
+      transition-type: crossfade;
+      transition-duration: 150;
+
+      styles [
+        "file-view",
+      ]
+
+      StackPage {
+        name: "view";
+
+        child: $LiaFileView file_view {};
+      }
+
+      StackPage {
+        name: "loading";
+
+        child: Adw.Spinner {
+          halign: center;
+          valign: center;
+          width-request: 32;
+          height-request: 32;
+        };
+      }
+
+      StackPage {
+        name: "status";
+
+        child: Adw.StatusPage status_page {
+          styles [
+            "compact",
+          ]
+        };
+      }
     }
   }
 }

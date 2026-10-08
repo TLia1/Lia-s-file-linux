@@ -393,3 +393,40 @@ scrolledwindow.text-preview textview {
 list.details-properties > row.property {
   min-height: 0;
 }
+
+/* ── Search bar (search in subfolders, filter chips) ─────────────────────── */
+
+.search-bar {
+  padding: 4px 8px;
+  /* Same height whichever controls are shown */
+  min-height: 38px;
+  border-spacing: 4px;
+  background-color: var(--view-bg-color);
+  box-shadow: inset 0 -1px alpha(currentColor, 0.08);
+}
+
+.search-bar > separator {
+  margin: 6px 4px;
+}
+
+.search-bar > button,
+.search-bar > menubutton > button {
+  min-height: 28px;
+  border-radius: 6px;
+}
+
+/* Chips: pill shaped, accent tinted once a value is chosen */
+.search-bar > menubutton.filter-chip > button {
+  border-radius: 14px;
+  padding: 0 10px;
+  box-shadow: inset 0 0 0 1px alpha(currentColor, 0.15);
+}
+
+.search-bar > menubutton.filter-chip.active > button {
+  background-color: alpha(var(--accent-bg-color), 0.15);
+  box-shadow: inset 0 0 0 1px alpha(var(--accent-bg-color), 0.5);
+}
+
+.search-bar > menubutton.filter-chip.active > button:hover {
+  background-color: alpha(var(--accent-bg-color), 0.22);
+}

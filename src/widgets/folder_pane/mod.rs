@@ -3,8 +3,11 @@
 //! status bar and binds them to the active pane's properties.
 //!
 //! Model chain:
-//! `DirectoryModel → FilterListModel (hidden, search) → SortListModel
-//!  (folders first + column sorter) → MultiSelection → FileView`
+//! `DirectoryModel → FilterListModel (hidden, search, filter chips) →
+//!  SortListModel (folders first + column sorter) → MultiSelection → FileView`
+//!
+//! Searching in subfolders swaps the `DirectoryModel` for a list of search
+//! results; the rest of the chain (filters, sorting, selection) stays.
 //!
 //! File operations started from the pane (drops, renames…) go to the job
 //! queue; once done, what they created in this folder gets selected.
@@ -17,8 +20,11 @@ use std::time::Duration;
 use gettextrs::{gettext, ngettext};
 use gtk::{gdk, gio, glib, glib::clone, prelude::*, subclass::prelude::*};
 
+use crate::model::directory_model::ATTRIBUTES;
+use crate::model::search_filters::{DateRange, Filters, Kind, SizeRange};
 use crate::model::{DirectoryModel, FileItem, History, sorting};
 use crate::services::file_ops::{FileOpJob, Operation, naming, queue};
+use crate::services::search::{self, Search};
 use crate::util::{format, settings};
 use crate::widgets::dnd;
 use crate::widgets::file_view::{DEFAULT_ICON_SIZE, FileView, ICON_SIZES, ViewMode};
@@ -32,6 +38,9 @@ struct FilterState {
     show_hidden: Cell<bool>,
     /// Lower-cased search text.
     query: RefCell<String>,
+    filters: Cell<Filters>,
+    /// The earliest modification time the date filter accepts.
+    earliest: Cell<Option<i64>>,
 }
 
 impl FilterState {
@@ -39,8 +48,20 @@ impl FilterState {
         if !self.show_hidden.get() && item.is_hidden() {
             return false;
         }
+        let filters = self.filters.get();
+        if filters.is_active()
+            && !filters.matches(
+                item.content_type().as_deref().unwrap_or_default(),
+                item.is_dir(),
+                item.size(),
+                item.modified(),
+                self.earliest.get(),
+            )
+        {
+            return false;
+        }
         let query = self.query.borrow();
-        query.is_empty() || item.display_name().to_lowercase().contains(query.as_str())
+        query.is_empty() || search::name_matches(&item.display_name(), &query)
     }
 }
 
@@ -57,6 +78,24 @@ mod imp {
         pub(super) file_view: TemplateChild<FileView>,
         #[template_child]
         pub(super) status_page: TemplateChild<adw::StatusPage>,
+        #[template_child]
+        pub(super) search_revealer: TemplateChild<gtk::Revealer>,
+        #[template_child]
+        pub(super) subfolders_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub(super) search_status: TemplateChild<gtk::Box>,
+        #[template_child]
+        pub(super) search_spinner: TemplateChild<adw::Spinner>,
+        #[template_child]
+        pub(super) search_status_label: TemplateChild<gtk::Label>,
+        #[template_child]
+        pub(super) kind_button: TemplateChild<gtk::MenuButton>,
+        #[template_child]
+        pub(super) date_button: TemplateChild<gtk::MenuButton>,
+        #[template_child]
+        pub(super) size_button: TemplateChild<gtk::MenuButton>,
+        #[template_child]
+        pub(super) clear_filters_button: TemplateChild<gtk::Button>,
 
         /// The folder being shown.
         #[property(get, nullable)]
@@ -69,6 +108,12 @@ mod imp {
         /// The instant-filter text. Reset when navigating.
         #[property(get, set = Self::set_search_text)]
         pub(super) search_text: RefCell<String>,
+        /// Showing search results from the folder and its subfolders
+        /// rather than the folder's contents.
+        #[property(get)]
+        pub(super) recursive: Cell<bool>,
+        /// A search in subfolders is running.
+        pub(super) searching: Cell<bool>,
         // Status bar texts.
         #[property(get)]
         pub(super) item_count_text: RefCell<String>,
@@ -89,6 +134,9 @@ mod imp {
 
         pub(super) history: RefCell<History<gio::File>>,
         pub(super) directory: DirectoryModel,
+        pub(super) search_results: OnceCell<gio::ListStore>,
+        pub(super) search_task: RefCell<Option<glib::JoinHandle<()>>>,
+        pub(super) search_actions: OnceCell<gio::SimpleActionGroup>,
         pub(super) filter_state: Rc<FilterState>,
         pub(super) filter: OnceCell<gtk::CustomFilter>,
         pub(super) filter_model: OnceCell<gtk::FilterListModel>,
@@ -151,9 +199,13 @@ mod imp {
             for handler in self.settings_handlers.take() {
                 settings.disconnect(handler);
             }
-            for task in [self.free_space_task.take(), self.info_task.take()]
-                .into_iter()
-                .flatten()
+            for task in [
+                self.free_space_task.take(),
+                self.info_task.take(),
+                self.search_task.take(),
+            ]
+            .into_iter()
+            .flatten()
             {
                 task.abort();
             }
@@ -243,8 +295,7 @@ impl FolderPane {
                 if !model.loading() {
                     pane.on_load_finished();
                 }
-                pane.imp().loading.set(model.loading());
-                pane.notify_loading();
+                pane.update_loading();
                 pane.update_content_page();
             }
         ));
@@ -342,6 +393,75 @@ impl FolderPane {
         imp.folders_first_sorter.set(folders_first).unwrap();
         imp.sort_model.set(sort_model).unwrap();
         imp.selection.set(selection).unwrap();
+        imp.search_results
+            .set(gio::ListStore::new::<FileItem>())
+            .unwrap();
+        self.setup_search_bar();
+    }
+
+    /// The `search.*` actions behind the search bar: searching in
+    /// subfolders and the Kind / Date / Size filter chips.
+    fn setup_search_bar(&self) {
+        let imp = self.imp();
+        let group = gio::SimpleActionGroup::new();
+        for name in ["kind", "date", "size"] {
+            let action =
+                gio::SimpleAction::new_stateful(name, Some(glib::VariantTy::STRING), &"any".into());
+            action.connect_change_state(clone!(
+                #[weak(rename_to = pane)]
+                self,
+                move |action, state| {
+                    if let Some(state) = state {
+                        action.set_state(state);
+                        pane.on_filters_changed();
+                    }
+                }
+            ));
+            group.add_action(&action);
+        }
+        let subfolders = gio::SimpleAction::new("subfolders", None);
+        subfolders.connect_activate(clone!(
+            #[weak(rename_to = pane)]
+            self,
+            move |_, _| pane.search_subfolders()
+        ));
+        group.add_action(&subfolders);
+        let clear = gio::SimpleAction::new("clear-filters", None);
+        clear.connect_activate(clone!(
+            #[weak(rename_to = pane)]
+            self,
+            move |_, _| pane.clear_filters()
+        ));
+        group.add_action(&clear);
+        self.insert_action_group("search", Some(&group));
+
+        let menu = |action: &str, choices: Vec<(&'static str, String)>| {
+            let menu = gio::Menu::new();
+            for (nick, label) in choices {
+                let item = gio::MenuItem::new(Some(&label), None);
+                item.set_action_and_target_value(
+                    Some(&format!("search.{action}")),
+                    Some(&nick.to_variant()),
+                );
+                menu.append_item(&item);
+            }
+            menu
+        };
+        imp.kind_button.set_menu_model(Some(&menu(
+            "kind",
+            Kind::ALL.map(|k| (k.nick(), k.label())).to_vec(),
+        )));
+        imp.date_button.set_menu_model(Some(&menu(
+            "date",
+            DateRange::ALL.map(|d| (d.nick(), d.label())).to_vec(),
+        )));
+        imp.size_button.set_menu_model(Some(&menu(
+            "size",
+            SizeRange::ALL.map(|s| (s.nick(), s.label())).to_vec(),
+        )));
+
+        imp.search_actions.set(group).unwrap();
+        self.update_search_bar();
     }
 
     // ── Navigation ─────────────────────────────────────────────────────────
@@ -390,6 +510,10 @@ impl FolderPane {
 
     pub fn reload(&self) {
         let imp = self.imp();
+        if imp.recursive.get() {
+            self.start_search();
+            return;
+        }
         // Keep the selection's first item focused after reloading.
         let selected = self.selected_items().into_iter().next();
         imp.select_after_load
@@ -415,11 +539,12 @@ impl FolderPane {
         imp.select_after_load.replace(select);
         imp.location.replace(Some(location.clone()));
 
-        // A new folder starts with an empty search.
+        // A new folder starts with an empty search and no filters.
+        self.exit_search();
         imp.filter_state.query.borrow_mut().clear();
         self.set_search_text("");
+        self.clear_filters();
 
-        imp.title.replace(display_name(location));
         imp.pending_select.borrow_mut().clear();
         imp.directory.load(location);
         imp.file_view.set_location(Some(location));
@@ -430,15 +555,43 @@ impl FolderPane {
         }
         self.update_free_space();
         self.update_location_info();
-        self.notify_title();
+        self.update_title();
         self.notify_location();
+    }
+
+    /// The folder's name, or "Search Results in …" when searching
+    /// subfolders.
+    fn update_title(&self) {
+        let imp = self.imp();
+        let Some(location) = self.location() else {
+            return;
+        };
+        let name = display_name(&location);
+        let title = if imp.recursive.get() {
+            gettext("Search Results in {}").replace("{}", &name)
+        } else {
+            name
+        };
+        if *imp.title.borrow() != title {
+            imp.title.replace(title);
+            self.notify_title();
+        }
+    }
+
+    /// The tab shows a spinner while the folder loads or a search runs.
+    fn update_loading(&self) {
+        let imp = self.imp();
+        let loading = imp.directory.loading() || imp.searching.get();
+        if imp.loading.replace(loading) != loading {
+            self.notify_loading();
+        }
     }
 
     /// While a folder streams in, sorted batches insert items above the
     /// visible ones; the view would follow its anchor item downwards.
     fn keep_at_top_while_loading(&self) {
         let imp = self.imp();
-        if imp.directory.loading()
+        if (imp.directory.loading() || imp.searching.get())
             && imp.select_after_load.borrow().is_none()
             && imp
                 .selection
@@ -714,7 +867,10 @@ impl FolderPane {
             if let Err(err) = naming::validate_name(text, portable) {
                 return Some(err.message());
             }
-            let parent = file.parent()?;
+            // Search results may be in other folders than the one listed.
+            let parent = file
+                .parent()
+                .filter(|p| directory.location().is_some_and(|l| l.equal(p)))?;
             directory
                 .find(&parent.child(text))
                 .filter(|existing| text != original && !existing.file().equal(&file))
@@ -741,6 +897,10 @@ impl FolderPane {
     /// Folders that aren't watched live (some network locations) are
     /// reloaded after an operation changed them.
     fn on_job_finished(&self, job: &FileOpJob) {
+        if self.recursive() {
+            self.update_search_results(job);
+            return;
+        }
         let Some(location) = self.location() else {
             return;
         };
@@ -805,11 +965,18 @@ impl FolderPane {
 
     fn set_writable(&self, writable: bool) {
         let imp = self.imp();
-        imp.file_view
-            .set_accepts_drops(writable || imp.is_trash.get());
         if imp.writable.replace(writable) != writable {
             self.notify_writable();
         }
+        self.update_accepts_drops();
+    }
+
+    /// Files can be dropped on the background of a writable folder (or the
+    /// trash), but not on search results: they come from many folders.
+    fn update_accepts_drops(&self) {
+        let imp = self.imp();
+        imp.file_view
+            .set_accepts_drops((imp.writable.get() || imp.is_trash.get()) && !imp.recursive.get());
     }
 
     // ── View options ───────────────────────────────────────────────────────
@@ -872,6 +1039,10 @@ impl FolderPane {
     fn set_show_hidden(&self, show: bool) {
         let imp = self.imp();
         imp.filter_state.show_hidden.set(show);
+        // The search skipped hidden folders: search again.
+        if show && imp.recursive.get() {
+            self.start_search();
+        }
         imp.filter.get().unwrap().changed(if show {
             gtk::FilterChange::LessStrict
         } else {
@@ -886,6 +1057,15 @@ impl FolderPane {
         if previous == query {
             return;
         }
+        // A search in subfolders follows the text; clearing it goes back
+        // to the folder.
+        if imp.recursive.get() {
+            if query.is_empty() {
+                self.exit_search();
+            } else {
+                self.start_search();
+            }
+        }
         let change = if query.contains(previous.as_str()) {
             gtk::FilterChange::MoreStrict
         } else if previous.contains(query.as_str()) {
@@ -894,7 +1074,285 @@ impl FolderPane {
             gtk::FilterChange::Different
         };
         imp.filter.get().unwrap().changed(change);
+        self.update_search_bar();
         self.update_content_page();
+    }
+
+    // ── Search ─────────────────────────────────────────────────────────────
+
+    /// Shows the files matching the search text in the folder and all its
+    /// subfolders, instead of only the folder's contents.
+    pub fn search_subfolders(&self) {
+        let imp = self.imp();
+        if imp.filter_state.query.borrow().is_empty() || self.location().is_none() {
+            return;
+        }
+        if !imp.recursive.replace(true) {
+            imp.filter_model
+                .get()
+                .unwrap()
+                .set_model(imp.search_results.get());
+            imp.file_view.set_search_mode(true);
+            self.update_accepts_drops();
+            self.update_title();
+            self.notify_recursive();
+        }
+        self.start_search();
+    }
+
+    /// (Re)starts the search in subfolders with the current text.
+    fn start_search(&self) {
+        let imp = self.imp();
+        self.cancel_search();
+        let results = imp.search_results.get().unwrap();
+        results.remove_all();
+        let query = search::Query {
+            text: imp.filter_state.query.borrow().clone(),
+            show_hidden: imp.filter_state.show_hidden.get(),
+        };
+        let Some(root) = self.location().filter(|_| !query.text.is_empty()) else {
+            return;
+        };
+        let search = Search::start(&root, query);
+        // Only a weak reference while waiting: the search may run for a
+        // long time and must not keep a closed tab alive.
+        let pane = self.downgrade();
+        let task = glib::spawn_future_local(async move {
+            while let Some(event) = search.next().await {
+                let Some(pane) = pane.upgrade() else {
+                    return;
+                };
+                match event {
+                    search::Event::Found(matches) => {
+                        let items: Vec<FileItem> =
+                            matches.into_iter().map(search::Match::into_item).collect();
+                        pane.imp()
+                            .search_results
+                            .get()
+                            .unwrap()
+                            .extend_from_slice(&items);
+                    }
+                    search::Event::LimitReached => pane.show_toast(
+                        &gettext("Search stopped after {} results")
+                            .replace("{}", &search::MAX_RESULTS.to_string()),
+                    ),
+                }
+            }
+            if let Some(pane) = pane.upgrade() {
+                pane.imp().search_task.take();
+                pane.set_searching(false);
+            }
+        });
+        imp.search_task.replace(Some(task));
+        self.set_searching(true);
+    }
+
+    /// Stops the running search, keeping the results found so far.
+    fn cancel_search(&self) {
+        if let Some(task) = self.imp().search_task.take() {
+            // Dropping the search cancels the walk.
+            task.abort();
+        }
+        self.set_searching(false);
+    }
+
+    /// Goes back from search results to the folder's contents.
+    fn exit_search(&self) {
+        let imp = self.imp();
+        self.cancel_search();
+        if !imp.recursive.replace(false) {
+            return;
+        }
+        imp.filter_model
+            .get()
+            .unwrap()
+            .set_model(Some(&imp.directory));
+        imp.search_results.get().unwrap().remove_all();
+        imp.file_view.set_search_mode(false);
+        self.update_accepts_drops();
+        self.update_title();
+        self.update_search_bar();
+        self.update_content_page();
+        self.notify_recursive();
+    }
+
+    fn set_searching(&self, searching: bool) {
+        let imp = self.imp();
+        if imp.searching.replace(searching) == searching {
+            return;
+        }
+        self.update_loading();
+        self.update_search_bar();
+        self.update_content_page();
+    }
+
+    /// Search results aren't watched for changes: after an operation,
+    /// drop the results that are gone and add new files that match
+    /// (renamed, duplicated…).
+    fn update_search_results(&self, job: &FileOpJob) {
+        let Some(root) = self.location() else {
+            return;
+        };
+        let sources = job.operation().sources();
+        let created = job.with_outcome(|o| o.created.clone()).unwrap_or_default();
+        if sources.is_empty() && created.is_empty() {
+            return;
+        }
+        glib::spawn_future_local(clone!(
+            #[weak(rename_to = pane)]
+            self,
+            async move {
+                let results = pane.imp().search_results.get().unwrap().clone();
+                let position = |file: &gio::File| {
+                    (0..results.n_items()).find(|&i| {
+                        results
+                            .item(i)
+                            .and_downcast::<FileItem>()
+                            .is_some_and(|item| item.file().equal(file))
+                    })
+                };
+                for source in sources {
+                    let gone = source
+                        .query_info_future(
+                            gio::FILE_ATTRIBUTE_STANDARD_TYPE,
+                            gio::FileQueryInfoFlags::NOFOLLOW_SYMLINKS,
+                            glib::Priority::DEFAULT,
+                        )
+                        .await
+                        .is_err_and(|err| err.matches(gio::IOErrorEnum::NotFound));
+                    if gone && let Some(i) = position(&source) {
+                        results.remove(i);
+                    }
+                }
+                for file in created {
+                    let query = pane.imp().filter_state.query.borrow().clone();
+                    let inside = file.has_prefix(&root);
+                    let name = file
+                        .basename()
+                        .map(|n| n.to_string_lossy().into_owned())
+                        .unwrap_or_default();
+                    if !pane.recursive()
+                        || !inside
+                        || !search::name_matches(&name, &query)
+                        || position(&file).is_some()
+                    {
+                        continue;
+                    }
+                    if let Ok(info) = file
+                        .query_info_future(
+                            ATTRIBUTES,
+                            gio::FileQueryInfoFlags::NONE,
+                            glib::Priority::DEFAULT,
+                        )
+                        .await
+                    {
+                        results.append(&FileItem::new(file, info));
+                    }
+                }
+            }
+        ));
+    }
+
+    fn on_filters_changed(&self) {
+        let imp = self.imp();
+        let state = |name: &str| {
+            imp.search_actions
+                .get()
+                .and_then(|group| group.action_state(name))
+                .and_then(|state| state.get::<String>())
+                .unwrap_or_default()
+        };
+        let filters = Filters {
+            kind: Kind::from_nick(&state("kind")),
+            date: DateRange::from_nick(&state("date")),
+            size: SizeRange::from_nick(&state("size")),
+        };
+        let now = glib::DateTime::now_local().ok();
+        let earliest = now.and_then(|now| {
+            let today =
+                glib::DateTime::from_local(now.year(), now.month(), now.day_of_month(), 0, 0, 0.0)
+                    .ok()?;
+            filters.date.earliest(now.to_unix(), today.to_unix())
+        });
+        imp.filter_state.earliest.set(earliest);
+        if imp.filter_state.filters.replace(filters) != filters {
+            imp.filter
+                .get()
+                .unwrap()
+                .changed(gtk::FilterChange::Different);
+        }
+        self.update_search_bar();
+        self.update_content_page();
+    }
+
+    fn clear_filters(&self) {
+        let Some(group) = self.imp().search_actions.get() else {
+            return;
+        };
+        for name in ["kind", "date", "size"] {
+            if let Some(action) = group
+                .lookup_action(name)
+                .and_downcast::<gio::SimpleAction>()
+            {
+                // `set_state` doesn't emit `change-state`: apply once below.
+                action.set_state(&"any".to_variant());
+            }
+        }
+        self.on_filters_changed();
+    }
+
+    /// Shows the search bar while there is something to search or filter,
+    /// with the chips' current values.
+    fn update_search_bar(&self) {
+        let imp = self.imp();
+        let recursive = imp.recursive.get();
+        let searching = imp.searching.get();
+        let filters = imp.filter_state.filters.get();
+        let has_query = !imp.filter_state.query.borrow().is_empty();
+
+        imp.search_revealer
+            .set_reveal_child(has_query || recursive || filters.is_active());
+        imp.subfolders_button.set_visible(!recursive);
+        imp.search_status.set_visible(recursive);
+        imp.search_spinner.set_visible(searching);
+        imp.search_status_label.set_label(&if searching {
+            gettext("Searching subfolders…")
+        } else {
+            gettext("Including subfolders")
+        });
+        imp.clear_filters_button.set_visible(filters.is_active());
+
+        let chip = |button: &gtk::MenuButton, active: bool, label: String| {
+            button.set_label(&label);
+            if active {
+                button.add_css_class("active");
+            } else {
+                button.remove_css_class("active");
+            }
+        };
+        chip(
+            &imp.kind_button,
+            filters.kind != Kind::Any,
+            if filters.kind == Kind::Any {
+                gettext("Kind")
+            } else {
+                filters.kind.label()
+            },
+        );
+        chip(
+            &imp.date_button,
+            filters.date != DateRange::Any,
+            if filters.date == DateRange::Any {
+                gettext("Date Modified")
+            } else {
+                filters.date.label()
+            },
+        );
+        chip(
+            &imp.size_button,
+            filters.size != SizeRange::Any,
+            filters.size.short_label(),
+        );
     }
 
     // ── Status & placeholder pages ─────────────────────────────────────────
@@ -905,7 +1363,20 @@ impl FolderPane {
         let visible = imp.sort_model.get().map_or(0, |m| m.n_items());
         let page = &imp.status_page;
 
-        let name = if let Some(err) = directory.error().filter(|_| !directory.loading()) {
+        let name = if imp.recursive.get() {
+            if visible > 0 {
+                "view"
+            } else if imp.searching.get() {
+                "loading"
+            } else {
+                page.set_icon_name(Some("system-search-symbolic"));
+                page.set_title(&gettext("No Results Found"));
+                page.set_description(Some(&gettext(
+                    "Nothing in this folder or its subfolders matches",
+                )));
+                "status"
+            }
+        } else if let Some(err) = directory.error().filter(|_| !directory.loading()) {
             let trash_unavailable =
                 err.matches(gio::IOErrorEnum::NotSupported) && imp.is_trash.get();
             let (icon, title) = if trash_unavailable {
@@ -935,10 +1406,12 @@ impl FolderPane {
             "view"
         } else if directory.loading() {
             "loading"
-        } else if !imp.filter_state.query.borrow().is_empty() {
+        } else if !imp.filter_state.query.borrow().is_empty()
+            || imp.filter_state.filters.get().is_active()
+        {
             page.set_icon_name(Some("system-search-symbolic"));
             page.set_title(&gettext("No Results Found"));
-            page.set_description(Some(&gettext("Try a different search")));
+            page.set_description(Some(&gettext("Press Enter to search in subfolders too")));
             "status"
         } else {
             page.set_icon_name(Some("folder-symbolic"));
@@ -1059,4 +1532,18 @@ pub fn display_name(file: &gio::File) -> String {
         .map(|b| b.to_string_lossy().into_owned())
         .filter(|b| !b.is_empty())
         .unwrap_or_else(|| file.parse_name().into())
+}
+
+/// Where a search result is, relative to the folder searched: "Documents"
+/// for a file directly in Documents, "Documents/Projects/src" deeper down.
+pub fn relative_folder(root: &gio::File, file: &gio::File) -> String {
+    let Some(parent) = file.parent() else {
+        return String::new();
+    };
+    let root_name = display_name(root);
+    match root.relative_path(&parent) {
+        Some(path) => format!("{root_name}/{}", path.display()),
+        None if parent.equal(root) => root_name,
+        None => parent.parse_name().into(),
+    }
 }

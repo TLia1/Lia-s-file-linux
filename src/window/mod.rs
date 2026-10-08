@@ -534,11 +534,17 @@ impl Window {
                 }
             }
         ));
+        // Enter: search in subfolders too, then move to the results.
         search.connect_activate(clone!(
             #[weak(rename_to = window)]
             self,
-            move |_| {
+            move |entry| {
                 if let Some(pane) = window.active_pane() {
+                    // The entry delays `search-changed`: apply the text now.
+                    pane.set_search_text(entry.text().to_string());
+                    if !pane.recursive() {
+                        pane.search_subfolders();
+                    }
                     pane.grab_focus();
                 }
             }

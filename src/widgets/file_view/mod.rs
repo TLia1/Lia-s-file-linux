@@ -17,6 +17,7 @@ use crate::model::{FileItem, sorting};
 use crate::services::clipboard::clipboard_service;
 use crate::util::format;
 use crate::widgets::dnd;
+use crate::widgets::folder_pane;
 use crate::widgets::thumbnail_image::ThumbnailImage;
 
 /// Grid icon sizes cycled through by zooming.
@@ -67,6 +68,8 @@ mod imp {
         pub(super) name_column: OnceCell<gtk::ColumnViewColumn>,
         /// "Original location" and "Date deleted", shown in the trash.
         pub(super) trash_columns: OnceCell<[gtk::ColumnViewColumn; 2]>,
+        /// "Folder", shown with search results.
+        pub(super) folder_column: OnceCell<gtk::ColumnViewColumn>,
         pub(super) selection: RefCell<Option<gtk::MultiSelection>>,
         pub(super) context_menu: OnceCell<gtk::PopoverMenu>,
         pub(super) icon_size: Cell<i32>,
@@ -317,6 +320,12 @@ impl FileView {
         }
     }
 
+    /// Search results come from many folders: show which one in the
+    /// details view.
+    pub fn set_search_mode(&self, search: bool) {
+        self.imp().folder_column.get().unwrap().set_visible(search);
+    }
+
     /// The id of the sorted column (`name`, `modified`, `type`, `size`) and
     /// whether the order is descending.
     pub fn sort_state(&self) -> (String, bool) {
@@ -483,6 +492,28 @@ impl FileView {
             .expand(true)
             .resizable(true)
             .build();
+        let view = self.downgrade();
+        let folder = gtk::ColumnViewColumn::builder()
+            .id("folder")
+            .title(gettext("Folder"))
+            .factory(&self.text_factory(0.0, move |item| {
+                view.upgrade()
+                    .and_then(|view| view.imp().location.borrow().clone())
+                    .map(|root| folder_pane::relative_folder(&root, item.file()))
+                    .unwrap_or_default()
+            }))
+            .sorter(&gtk::CustomSorter::new(|a, b| {
+                let parent = |o: &glib::Object| {
+                    o.downcast_ref::<FileItem>()
+                        .and_then(|item| item.file().parent())
+                        .map(|parent| parent.uri())
+                };
+                parent(a).cmp(&parent(b)).into()
+            }))
+            .fixed_width(240)
+            .resizable(true)
+            .visible(false)
+            .build();
         let origin = gtk::ColumnViewColumn::builder()
             .id("origin")
             .title(gettext("Original location"))
@@ -546,12 +577,13 @@ impl FileView {
             .resizable(true)
             .build();
 
-        for column in [&name, &origin, &deleted, &modified, &kind, &size] {
+        for column in [&name, &folder, &origin, &deleted, &modified, &kind, &size] {
             column_view.append_column(column);
         }
         column_view.sort_by_column(Some(&name), gtk::SortType::Ascending);
         self.imp().name_column.set(name).unwrap();
         self.imp().trash_columns.set([origin, deleted]).unwrap();
+        self.imp().folder_column.set(folder).unwrap();
     }
 
     /// Controllers shared by every cell: menus, dragging, dropping.
