@@ -91,5 +91,11 @@
       <summary>File operations run at the same time on one device</summary>
       <description>Copies and moves to the same drive run one after another by default, which is fastest on most disks. Operations on different drives always run in parallel.</description>
     </key>
+
+    <!-- Network -->
+    <key name="recent-servers" type="as">
+      <default>[]</default>
+      <summary>Servers recently connected to, most recent first</summary>
+    </key>
   </schema>
 </schemalist>

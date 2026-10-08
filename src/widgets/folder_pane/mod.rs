@@ -20,14 +20,18 @@ use std::time::Duration;
 use gettextrs::{gettext, ngettext};
 use gtk::{gdk, gio, glib, glib::clone, prelude::*, subclass::prelude::*};
 
+use crate::dialogs;
 use crate::model::directory_model::ATTRIBUTES;
+use crate::model::places;
 use crate::model::search_filters::{DateRange, Filters, Kind, SizeRange};
 use crate::model::{DirectoryModel, FileItem, History, sorting};
 use crate::services::file_ops::{FileOpJob, Operation, naming, queue};
 use crate::services::search::{self, Search};
-use crate::util::{format, settings};
+use crate::services::volumes;
+use crate::util::{format, sandbox, settings};
 use crate::widgets::dnd;
 use crate::widgets::file_view::{DEFAULT_ICON_SIZE, FileView, ICON_SIZES, ViewMode};
+use crate::widgets::this_pc::ThisPcPage;
 
 /// How long to wait for the items an operation created to show up.
 const SELECT_TIMEOUT: Duration = Duration::from_secs(3);
@@ -78,6 +82,8 @@ mod imp {
         pub(super) file_view: TemplateChild<FileView>,
         #[template_child]
         pub(super) status_page: TemplateChild<adw::StatusPage>,
+        #[template_child]
+        pub(super) this_pc_page: TemplateChild<ThisPcPage>,
         #[template_child]
         pub(super) search_revealer: TemplateChild<gtk::Revealer>,
         #[template_child]
@@ -131,6 +137,12 @@ mod imp {
         pub(super) is_trash: Cell<bool>,
         /// The folder's file system needs Windows-compatible names.
         pub(super) portable_names: Cell<bool>,
+        /// Showing the "This PC" page rather than a folder.
+        pub(super) this_pc: Cell<bool>,
+        /// The location that wasn't mounted and that mounting was tried
+        /// for (once), and whether it's being mounted now.
+        pub(super) mount_attempted: RefCell<Option<gio::File>>,
+        pub(super) mounting: Cell<bool>,
 
         pub(super) history: RefCell<History<gio::File>>,
         pub(super) directory: DirectoryModel,
@@ -165,6 +177,7 @@ mod imp {
 
         fn class_init(klass: &mut Self::Class) {
             FileView::ensure_type();
+            ThisPcPage::ensure_type();
             klass.bind_template();
             klass.set_layout_manager_type::<gtk::BinLayout>();
             klass.set_css_name("lia-folder-pane");
@@ -294,6 +307,7 @@ impl FolderPane {
             move |model| {
                 if !model.loading() {
                     pane.on_load_finished();
+                    pane.mount_if_needed();
                 }
                 pane.update_loading();
                 pane.update_content_page();
@@ -328,6 +342,23 @@ impl FolderPane {
             #[weak(rename_to = pane)]
             self,
             move |_, item| pane.open_item(item, false)
+        ));
+        imp.this_pc_page.connect_open_location(clone!(
+            #[weak(rename_to = pane)]
+            self,
+            move |_, location, new_tab| {
+                match pane.root().and_downcast::<crate::window::Window>() {
+                    Some(window) if new_tab => {
+                        window.open_tab(location, false);
+                    }
+                    _ => pane.navigate_to(location),
+                }
+            }
+        ));
+        imp.this_pc_page.connect_n_devices_notify(clone!(
+            #[weak(rename_to = pane)]
+            self,
+            move |_| pane.update_status()
         ));
         imp.file_view.connect_drop_files(clone!(
             #[weak(rename_to = pane)]
@@ -510,6 +541,9 @@ impl FolderPane {
 
     pub fn reload(&self) {
         let imp = self.imp();
+        if imp.this_pc.get() {
+            return;
+        }
         if imp.recursive.get() {
             self.start_search();
             return;
@@ -546,7 +580,15 @@ impl FolderPane {
         self.clear_filters();
 
         imp.pending_select.borrow_mut().clear();
-        imp.directory.load(location);
+        imp.mount_attempted.replace(None);
+        imp.mounting.set(false);
+        let this_pc = places::is_this_pc(location);
+        imp.this_pc.set(this_pc);
+        if this_pc {
+            imp.directory.clear();
+        } else {
+            imp.directory.load(location);
+        }
         imp.file_view.set_location(Some(location));
         let is_trash = dnd::is_trash(location);
         imp.file_view.set_trash_mode(is_trash);
@@ -556,6 +598,8 @@ impl FolderPane {
         self.update_free_space();
         self.update_location_info();
         self.update_title();
+        self.update_content_page();
+        self.update_status();
         self.notify_location();
     }
 
@@ -624,6 +668,60 @@ impl FolderPane {
         self.apply_pending_selection(false);
     }
 
+    /// A network location that isn't mounted yet (typed in the address
+    /// bar, a bookmark, a restored tab…) is mounted, then listed.
+    fn mount_if_needed(&self) {
+        let imp = self.imp();
+        let Some(location) = self.location() else {
+            return;
+        };
+        let not_mounted = imp
+            .directory
+            .error()
+            .is_some_and(|err| err.matches(gio::IOErrorEnum::NotMounted));
+        let attempted = imp
+            .mount_attempted
+            .borrow()
+            .as_ref()
+            .is_some_and(|l| l.equal(&location));
+        if !not_mounted || attempted {
+            return;
+        }
+        imp.mount_attempted.replace(Some(location.clone()));
+        imp.mounting.set(true);
+        self.update_content_page();
+        glib::spawn_future_local(clone!(
+            #[weak(rename_to = pane)]
+            self,
+            async move {
+                let result = volumes::mount_location(&location, Some(pane.upcast_ref())).await;
+                let imp = pane.imp();
+                if !pane.location().is_some_and(|l| l.equal(&location)) {
+                    return;
+                }
+                imp.mounting.set(false);
+                match result {
+                    Ok(()) => {
+                        imp.directory.load(&location);
+                        pane.update_free_space();
+                        pane.update_location_info();
+                    }
+                    Err(err) => {
+                        if !volumes::is_handled(&err) {
+                            tracing::warn!("cannot mount {}: {err}", location.uri());
+                        }
+                        pane.update_content_page();
+                    }
+                }
+            }
+        ));
+    }
+
+    /// Whether the pane shows the "This PC" page.
+    pub fn is_this_pc(&self) -> bool {
+        self.imp().this_pc.get()
+    }
+
     // ── Opening ────────────────────────────────────────────────────────────
 
     /// Opens folders in place and files with their default application
@@ -652,6 +750,21 @@ impl FolderPane {
 
     pub fn open_selection(&self, choose_app: bool) {
         let items = self.selected_items();
+        // Our own chooser lists the host's apps; a sandbox only sees its
+        // own, so there the portal asks instead.
+        if choose_app && !sandbox::is_flatpak() {
+            let files: Vec<&FileItem> = items.iter().filter(|i| !i.is_dir()).collect();
+            let targets: Vec<gio::File> = files.iter().map(|i| i.target_file()).collect();
+            let types: Vec<String> = files
+                .iter()
+                .map(|i| {
+                    i.content_type()
+                        .map_or_else(|| "application/octet-stream".to_owned(), String::from)
+                })
+                .collect();
+            dialogs::open_with::present(self, targets, &types);
+            return;
+        }
         // Several folders: open the first one here; files open normally.
         let mut navigated = false;
         for item in &items {
@@ -1363,7 +1476,11 @@ impl FolderPane {
         let visible = imp.sort_model.get().map_or(0, |m| m.n_items());
         let page = &imp.status_page;
 
-        let name = if imp.recursive.get() {
+        let name = if imp.this_pc.get() {
+            "this-pc"
+        } else if imp.mounting.get() {
+            "loading"
+        } else if imp.recursive.get() {
             if visible > 0 {
                 "view"
             } else if imp.searching.get() {
@@ -1435,7 +1552,11 @@ impl FolderPane {
 
     fn update_status(&self) {
         let imp = self.imp();
-        let visible = imp.sort_model.get().map_or(0, |m| m.n_items());
+        let visible = if imp.this_pc.get() {
+            imp.this_pc_page.n_devices()
+        } else {
+            imp.sort_model.get().map_or(0, |m| m.n_items())
+        };
         self.set_text(
             &imp.item_count_text,
             format::item_count(visible),
@@ -1526,6 +1647,7 @@ pub fn display_name(file: &gio::File) -> String {
     match file.uri_scheme().as_deref() {
         Some("trash") if file.parent().is_none() => return gettext("Trash"),
         Some("recent") if file.parent().is_none() => return gettext("Recent"),
+        Some("computer") => return gettext("This PC"),
         _ => {}
     }
     file.basename()

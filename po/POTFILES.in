@@ -14,3 +14,12 @@ src/widgets/folder_pane/mod.rs
 src/widgets/sidebar/mod.rs
 src/window/mod.rs
 src/widgets/details_pane/mod.rs
+data/resources/ui/properties-dialog.blp
+src/dialogs/connect_server.rs
+src/dialogs/open_with.rs
+src/dialogs/properties.rs
+src/services/network.rs
+src/services/terminal.rs
+src/services/volumes.rs
+src/widgets/app_chooser.rs
+src/widgets/this_pc.rs

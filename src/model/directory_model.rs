@@ -197,6 +197,21 @@ impl DirectoryModel {
         }
     }
 
+    /// Stops loading and empties the model (for locations that aren't
+    /// folders, such as the "This PC" page).
+    pub fn clear(&self) {
+        let imp = self.imp();
+        self.stop();
+        imp.location.replace(None);
+        imp.error.replace(None);
+        imp.index.borrow_mut().clear();
+        let removed = imp.items.take().len() as u32;
+        if removed > 0 {
+            self.items_changed(0, removed, 0);
+        }
+        self.notify_location();
+    }
+
     /// Whether changes are followed live. Unmonitored folders must be
     /// reloaded after an operation changes them.
     pub fn is_monitored(&self) -> bool {

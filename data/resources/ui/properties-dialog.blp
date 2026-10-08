@@ -1,0 +1,159 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $LiaPropertiesDialog: Adw.Dialog {
+  title: _("Properties");
+  content-width: 460;
+  content-height: 640;
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      title-widget: Adw.ViewSwitcher switcher {
+        stack: stack;
+        policy: wide;
+      };
+    }
+
+    content: Adw.ToastOverlay toast_overlay {
+      child: Adw.ViewStack stack {
+        // ── General ──────────────────────────────────────────────────────
+        Adw.ViewStackPage {
+          name: "general";
+          title: _("General");
+          icon-name: "document-properties-symbolic";
+
+          child: Adw.PreferencesPage {
+            Adw.PreferencesGroup {
+              Box {
+                orientation: vertical;
+                spacing: 4;
+
+                $LiaThumbnailImage icon_image {
+                  pixel-size: 96;
+                  halign: center;
+                  margin-bottom: 8;
+                }
+
+                Label name_label {
+                  wrap: true;
+                  wrap-mode: word_char;
+                  justify: center;
+                  selectable: true;
+
+                  styles [
+                    "title-3",
+                  ]
+                }
+
+                Label type_label {
+                  wrap: true;
+                  justify: center;
+
+                  styles [
+                    "secondary",
+                  ]
+                }
+              }
+            }
+
+            Adw.PreferencesGroup general_group {}
+
+            Adw.PreferencesGroup dates_group {}
+          };
+        }
+
+        // ── Permissions ──────────────────────────────────────────────────
+        Adw.ViewStackPage permissions_page {
+          name: "permissions";
+          title: _("Permissions");
+          icon-name: "changes-prevent-symbolic";
+          visible: false;
+
+          child: Adw.PreferencesPage {
+            Adw.PreferencesGroup {
+              title: _("Ownership");
+
+              Adw.ActionRow owner_row {
+                title: _("Owner");
+                subtitle-selectable: true;
+                use-markup: false;
+
+                styles [
+                  "property",
+                ]
+              }
+
+              Adw.ActionRow group_row {
+                title: _("Group");
+                subtitle-selectable: true;
+                use-markup: false;
+
+                styles [
+                  "property",
+                ]
+              }
+            }
+
+            Adw.PreferencesGroup access_group {
+              title: _("Access");
+            }
+
+            Adw.PreferencesGroup {
+              Adw.SwitchRow exec_row {
+                title: _("Allow Executing as Program");
+                subtitle: _("Lets scripts and programs run when opened");
+              }
+
+              Adw.ActionRow mode_row {
+                title: _("Mode");
+                subtitle-selectable: true;
+
+                styles [
+                  "property",
+                  "numeric",
+                ]
+              }
+            }
+          };
+        }
+
+        // ── Open with ────────────────────────────────────────────────────
+        Adw.ViewStackPage open_with_page {
+          name: "open-with";
+          title: _("Open With");
+          icon-name: "application-x-executable-symbolic";
+          visible: false;
+
+          child: Adw.PreferencesPage {
+            Adw.PreferencesGroup open_with_group {
+              header-suffix: Button reset_button {
+                label: _("_Reset");
+                use-underline: true;
+                tooltip-text: _("Forget the default app chosen for this type");
+                valign: center;
+
+                styles [
+                  "flat",
+                ]
+              };
+            }
+
+            Adw.PreferencesGroup {
+              Button set_default_button {
+                label: _("_Set as Default");
+                use-underline: true;
+                halign: end;
+
+                styles [
+                  "suggested-action",
+                  "pill",
+                ]
+              }
+            }
+          };
+        }
+      };
+    };
+  };
+}

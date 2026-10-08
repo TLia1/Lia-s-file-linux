@@ -447,6 +447,13 @@ menu primary_menu {
 
   section {
     item {
+      label: _("Connect to _Server…");
+      action: "win.connect-to-server";
+    }
+  }
+
+  section {
+    item {
       label: _("Show _Hidden Files");
       action: "win.show-hidden";
     }
@@ -639,6 +646,11 @@ menu more_menu {
     item {
       label: _("Copy _Path");
       action: "win.copy-path";
+    }
+
+    item {
+      label: _("Open in Ter_minal");
+      action: "win.open-terminal";
     }
   }
 

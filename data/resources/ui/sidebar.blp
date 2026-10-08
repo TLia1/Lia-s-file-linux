@@ -24,6 +24,7 @@ menu row_menu {
     item {
       label: _("Open in New _Tab");
       action: "sidebar.open-in-new-tab";
+      hidden-when: "action-disabled";
     }
   }
 
@@ -41,8 +42,28 @@ menu row_menu {
     }
 
     item {
+      label: _("_Mount");
+      action: "sidebar.mount";
+      hidden-when: "action-disabled";
+    }
+
+    item {
+      label: _("U_nmount");
+      action: "sidebar.unmount";
+      hidden-when: "action-disabled";
+    }
+
+    item {
       label: _("_Eject");
       action: "sidebar.eject";
+      hidden-when: "action-disabled";
+    }
+  }
+
+  section {
+    item {
+      label: _("P_roperties");
+      action: "sidebar.properties";
       hidden-when: "action-disabled";
     }
   }

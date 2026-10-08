@@ -121,6 +121,12 @@ template $LiaFolderPane: Widget {
       }
 
       StackPage {
+        name: "this-pc";
+
+        child: $LiaThisPcPage this_pc_page {};
+      }
+
+      StackPage {
         name: "status";
 
         child: Adw.StatusPage status_page {

@@ -10,5 +10,6 @@
     <file preprocess="xml-stripblanks">ui/sidebar.ui</file>
     <file preprocess="xml-stripblanks">ui/conflict-dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/details-pane.ui</file>
+    <file preprocess="xml-stripblanks">ui/properties-dialog.ui</file>
   </gresource>
 </gresources>

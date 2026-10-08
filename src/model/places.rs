@@ -1,6 +1,6 @@
 //! Places shown in the sidebar: XDG user folders, the GTK bookmarks file
 //! (`~/.config/gtk-3.0/bookmarks`, shared with Nautilus and the GTK file
-//! chooser) and icons for well-known locations.
+//! chooser), the "This PC" page and icons for well-known locations.
 //!
 //! The bookmarks format is one entry per line: `<uri>[ <label>]`.
 
@@ -65,6 +65,13 @@ pub fn remove_bookmark(bookmarks: &mut Vec<Bookmark>, uri: &str) -> bool {
     let before = bookmarks.len();
     bookmarks.retain(|b| b.uri != uri);
     bookmarks.len() != before
+}
+
+/// The "This PC" page: drives and network locations.
+pub const THIS_PC_URI: &str = "computer:///";
+
+pub fn is_this_pc(file: &gio::File) -> bool {
+    file.uri_scheme().as_deref() == Some("computer")
 }
 
 pub fn bookmarks_file() -> gio::File {
@@ -142,6 +149,7 @@ pub fn icon_name_for(file: &gio::File) -> &'static str {
     match file.uri_scheme().as_deref() {
         Some("trash") => return "user-trash-symbolic",
         Some("recent") => return "document-open-recent-symbolic",
+        Some("computer") => return "computer-symbolic",
         Some("file") => {}
         Some(_) => return "folder-remote-symbolic",
         None => {}

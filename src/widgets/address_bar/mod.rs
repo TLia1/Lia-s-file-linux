@@ -408,6 +408,7 @@ fn root_segment(file: gio::File) -> Segment {
         Some("file") => (String::new(), "drive-harddisk-symbolic"),
         Some("trash") => (gettext("Trash"), "user-trash-symbolic"),
         Some("recent") => (gettext("Recent"), "document-open-recent-symbolic"),
+        Some("computer") => (gettext("This PC"), "computer-symbolic"),
         Some("network") => (gettext("Network"), "network-workgroup-symbolic"),
         _ => (
             file.parse_name().trim_end_matches('/').to_string(),

@@ -2,8 +2,9 @@
 //!
 //! Sections: Home & Recent · Pinned (XDG user folders, then the GTK
 //! bookmarks) · This PC (file system, drives and unmounted volumes from the
-//! `gio::VolumeMonitor`, with usage bars and eject buttons) · Network
-//! (network mounts) · Trash (with its item count).
+//! `gio::VolumeMonitor`, with usage bars and eject buttons; its heading
+//! opens the "This PC" page) · Network (network mounts and "Connect to
+//! Server…") · Trash (with its item count).
 //!
 //! The list is rebuilt from scratch whenever bookmarks or mounts change;
 //! there are only a few dozen rows. The row matching the active tab's
@@ -20,23 +21,11 @@ use gettextrs::gettext;
 use gtk::{gdk, gio, glib, glib::clone, prelude::*, subclass::prelude::*};
 
 use crate::model::places::{self, Bookmark};
-use crate::util::format;
+use crate::services::volumes::{self, Device};
 use crate::widgets::dnd;
 use crate::widgets::folder_pane::display_name;
 
 const TRASH_URI: &str = "trash:///";
-const NETWORK_SCHEMES: [&str; 10] = [
-    "smb",
-    "sftp",
-    "ssh",
-    "ftp",
-    "ftps",
-    "dav",
-    "davs",
-    "afp",
-    "nfs",
-    "google-drive",
-];
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Section {
@@ -50,9 +39,9 @@ enum Section {
 #[derive(Clone)]
 enum Target {
     File(gio::File),
-    Mount(gio::Mount),
-    /// A volume that isn't mounted yet; activating it mounts it.
-    Volume(gio::Volume),
+    Device(Device),
+    /// Opens the Connect to Server dialog.
+    ConnectToServer,
 }
 
 #[derive(Clone)]
@@ -79,15 +68,23 @@ impl Place {
     fn location(&self) -> Option<gio::File> {
         match &self.target {
             Target::File(file) => Some(file.clone()),
-            Target::Mount(mount) => Some(mount.root()),
-            Target::Volume(volume) => volume.get_mount().map(|m| m.root()),
+            Target::Device(device) => device.location(),
+            Target::ConnectToServer => None,
         }
     }
 
-    /// The mount that the eject button / menu item acts on.
-    fn ejectable_mount(&self) -> Option<gio::Mount> {
+    /// The mount that the eject button and menu items act on.
+    fn removable_mount(&self) -> Option<gio::Mount> {
         match &self.target {
-            Target::Mount(mount) if mount.can_eject() || mount.can_unmount() => Some(mount.clone()),
+            Target::Device(device) => device.removable_mount(),
+            _ => None,
+        }
+    }
+
+    /// A volume that can be mounted.
+    fn unmounted_volume(&self) -> Option<gio::Volume> {
+        match &self.target {
+            Target::Device(device) => device.volume().filter(|v| v.get_mount().is_none()),
             _ => None,
         }
     }
@@ -96,11 +93,6 @@ impl Place {
 /// During a drag: the row under the pointer, and whether the dragged files
 /// are on its device (once known).
 type Hovered = Option<(i32, Option<bool>)>;
-
-fn is_network(file: &gio::File) -> bool {
-    file.uri_scheme()
-        .is_some_and(|scheme| NETWORK_SCHEMES.contains(&scheme.as_str()))
-}
 
 mod imp {
     use super::*;
@@ -361,9 +353,45 @@ impl Sidebar {
                     #[weak(rename_to = sidebar)]
                     self,
                     move |_, _, _| {
-                        let mount = sidebar.menu_place().and_then(|p| p.ejectable_mount());
+                        let mount = sidebar.menu_place().and_then(|p| p.removable_mount());
                         if let Some(mount) = mount {
                             sidebar.eject(&mount);
+                        }
+                    }
+                ))
+                .build(),
+            gio::ActionEntry::builder("unmount")
+                .activate(clone!(
+                    #[weak(rename_to = sidebar)]
+                    self,
+                    move |_, _, _| {
+                        let mount = sidebar.menu_place().and_then(|p| p.removable_mount());
+                        if let Some(mount) = mount {
+                            sidebar.unmount(&mount);
+                        }
+                    }
+                ))
+                .build(),
+            gio::ActionEntry::builder("mount")
+                .activate(clone!(
+                    #[weak(rename_to = sidebar)]
+                    self,
+                    move |_, _, _| {
+                        if let Some(index) = sidebar.imp().menu_row.get() {
+                            sidebar.activate(index, false);
+                        }
+                    }
+                ))
+                .build(),
+            gio::ActionEntry::builder("properties")
+                .activate(clone!(
+                    #[weak(rename_to = sidebar)]
+                    self,
+                    move |_, _, _| {
+                        let location = sidebar.menu_place().and_then(|p| p.location());
+                        if let Some(location) = location {
+                            let uri = location.uri().to_variant();
+                            let _ = sidebar.activate_action("win.location-properties", Some(&uri));
                         }
                     }
                 ))
@@ -476,45 +504,28 @@ impl Sidebar {
             gio::File::for_path("/"),
         ));
         let monitor = self.imp().volume_monitor.get().unwrap();
-        for mount in monitor.mounts() {
-            let root = mount.root();
-            if mount.is_shadowed() || root.path().is_some_and(|p| p.parent().is_none()) {
-                continue;
-            }
+        for device in volumes::devices(monitor) {
             list.push(Place {
-                section: if is_network(&root) {
+                section: if device.is_network() {
                     Section::Network
                 } else {
                     Section::Drives
                 },
-                label: mount.name().into(),
-                icon: mount.symbolic_icon(),
-                target: Target::Mount(mount),
+                label: device.name(),
+                icon: device.symbolic_icon(),
+                target: Target::Device(device),
                 bookmark_uri: None,
             });
         }
-        for volume in monitor.volumes() {
-            if volume.get_mount().is_some() || !volume.can_mount() {
-                continue;
-            }
-            let network = volume
-                .identifier(gio::VOLUME_IDENTIFIER_KIND_CLASS)
-                .as_deref()
-                == Some("network");
-            list.push(Place {
-                section: if network {
-                    Section::Network
-                } else {
-                    Section::Drives
-                },
-                label: volume.name().into(),
-                icon: volume.symbolic_icon(),
-                target: Target::Volume(volume),
-                bookmark_uri: None,
-            });
-        }
+        list.push(Place {
+            section: Section::Network,
+            label: gettext("Connect to Server…"),
+            icon: gio::ThemedIcon::new("network-server-symbolic").upcast(),
+            target: Target::ConnectToServer,
+            bookmark_uri: None,
+        });
         // Keep each section contiguous (mounts and volumes interleave
-        // network and local entries).
+        // network and local entries). The sort is stable.
         list.sort_by_key(|p| p.section as u8);
 
         list.push(Place::file(
@@ -589,7 +600,7 @@ impl Sidebar {
         if place.section == Section::Drives
             && let Some(location) = location.filter(|l| l.path().is_some())
         {
-            let bar = usage_bar();
+            let bar = volumes::usage_bar();
             text.append(&bar);
             fill_usage(&row, &bar, location);
         }
@@ -602,7 +613,7 @@ impl Sidebar {
             self.imp().trash_widgets.replace(Some((image, count)));
         }
 
-        if let Some(mount) = place.ejectable_mount() {
+        if let Some(mount) = place.removable_mount() {
             let button = gtk::Button::builder()
                 .icon_name("media-eject-symbolic")
                 .valign(gtk::Align::Center)
@@ -636,7 +647,10 @@ impl Sidebar {
         let title = match section.unwrap() {
             Section::Places => None,
             Section::Pinned => Some(gettext("Pinned")),
-            Section::Drives => Some(gettext("This PC")),
+            Section::Drives => {
+                row.set_header(Some(&self.this_pc_heading()));
+                return;
+            }
             Section::Network => Some(gettext("Network")),
             Section::Trash => {
                 let separator = gtk::Separator::new(gtk::Orientation::Horizontal);
@@ -653,6 +667,25 @@ impl Sidebar {
                 .build()
         });
         row.set_header(header.as_ref());
+    }
+
+    /// The "This PC" heading, a button that opens the drives page.
+    fn this_pc_heading(&self) -> gtk::Button {
+        let label = gtk::Label::builder()
+            .label(gettext("This PC"))
+            .xalign(0.0)
+            .build();
+        let button = gtk::Button::builder()
+            .child(&label)
+            .tooltip_text(gettext("Show All Drives"))
+            .css_classes(["flat", "sidebar-heading", "sidebar-heading-button"])
+            .build();
+        button.connect_clicked(clone!(
+            #[weak(rename_to = sidebar)]
+            self,
+            move |_| sidebar.emit_open(&gio::File::for_uri(places::THIS_PC_URI), false)
+        ));
+        button
     }
 
     fn sync_selection(&self) {
@@ -868,24 +901,20 @@ impl Sidebar {
             self.emit_open(&location, new_tab);
             return;
         }
-        let Target::Volume(volume) = place.target else {
+        if let Target::ConnectToServer = place.target {
+            let _ = self.activate_action("win.connect-to-server", None);
+            return;
+        }
+        let Some(volume) = place.unmounted_volume() else {
             return;
         };
-        let operation = gtk::MountOperation::new(self.root().and_downcast_ref::<gtk::Window>());
         glib::spawn_future_local(clone!(
             #[weak(rename_to = sidebar)]
             self,
             async move {
-                match volume
-                    .mount_future(gio::MountMountFlags::NONE, Some(&operation))
-                    .await
-                {
-                    Ok(()) => {
-                        if let Some(mount) = volume.get_mount() {
-                            sidebar.emit_open(&mount.root(), new_tab);
-                        }
-                    }
-                    Err(err) if err.matches(gio::IOErrorEnum::FailedHandled) => {}
+                match volumes::mount(&volume, Some(sidebar.upcast_ref())).await {
+                    Ok(root) => sidebar.emit_open(&root, new_tab),
+                    Err(err) if volumes::is_handled(&err) => {}
                     Err(err) => {
                         tracing::warn!("cannot mount {}: {err}", place.label);
                         sidebar.show_toast(
@@ -901,34 +930,37 @@ impl Sidebar {
         self.emit_by_name::<()>("open-location", &[location, &new_tab]);
     }
 
+    /// Ejects (or unmounts and powers off) a drive.
     fn eject(&self, mount: &gio::Mount) {
-        let operation = gtk::MountOperation::new(self.root().and_downcast_ref::<gtk::Window>());
         let mount = mount.clone();
         glib::spawn_future_local(clone!(
             #[weak(rename_to = sidebar)]
             self,
             async move {
-                let name = mount.name();
-                let ejecting = mount.can_eject();
-                let result = if ejecting {
-                    mount
-                        .eject_with_operation_future(gio::MountUnmountFlags::NONE, Some(&operation))
-                        .await
-                } else {
-                    mount
-                        .unmount_with_operation_future(
-                            gio::MountUnmountFlags::NONE,
-                            Some(&operation),
-                        )
-                        .await
-                };
-                match result {
-                    Ok(()) if ejecting => sidebar
-                        .show_toast(&gettext("“{}” can be safely removed").replace("{}", &name)),
-                    Ok(()) => {}
-                    Err(err) if err.matches(gio::IOErrorEnum::FailedHandled) => {}
+                match volumes::eject(&mount, Some(sidebar.upcast_ref())).await {
+                    Ok(Some(message)) => sidebar.show_toast(&message),
+                    Ok(None) => {}
+                    Err(err) if volumes::is_handled(&err) => {}
                     Err(err) => {
-                        tracing::warn!("cannot eject {name}: {err}");
+                        tracing::warn!("cannot eject {}: {err}", mount.name());
+                        sidebar.show_toast(err.message());
+                    }
+                }
+            }
+        ));
+    }
+
+    fn unmount(&self, mount: &gio::Mount) {
+        let mount = mount.clone();
+        glib::spawn_future_local(clone!(
+            #[weak(rename_to = sidebar)]
+            self,
+            async move {
+                match volumes::unmount(&mount, Some(sidebar.upcast_ref())).await {
+                    Ok(()) => {}
+                    Err(err) if volumes::is_handled(&err) => {}
+                    Err(err) => {
+                        tracing::warn!("cannot unmount {}: {err}", mount.name());
                         sidebar.show_toast(err.message());
                     }
                 }
@@ -976,11 +1008,20 @@ impl Sidebar {
             "empty-trash",
             place.as_ref().is_some_and(|p| p.section == Section::Trash),
         );
+        let mount = place.as_ref().and_then(Place::removable_mount);
+        set_enabled("eject", mount.as_ref().is_some_and(|m| m.can_eject()));
+        set_enabled("unmount", mount.as_ref().is_some_and(|m| m.can_unmount()));
         set_enabled(
-            "eject",
+            "mount",
             place
                 .as_ref()
-                .is_some_and(|p| p.ejectable_mount().is_some()),
+                .is_some_and(|p| p.unmounted_volume().is_some()),
+        );
+        let location = place.as_ref().and_then(Place::location);
+        set_enabled("open-in-new-tab", location.is_some());
+        set_enabled(
+            "properties",
+            location.is_some_and(|l| !matches!(l.uri_scheme().as_deref(), Some("recent"))),
         );
 
         let point = imp
@@ -1004,26 +1045,6 @@ impl Sidebar {
     }
 }
 
-/// A thin drive usage bar: accent colour, red above 90 %.
-fn usage_bar() -> gtk::LevelBar {
-    let bar = gtk::LevelBar::builder()
-        .min_value(0.0)
-        .max_value(1.0)
-        .visible(false)
-        .css_classes(["usage-bar"])
-        .build();
-    for name in [
-        gtk::LEVEL_BAR_OFFSET_LOW,
-        gtk::LEVEL_BAR_OFFSET_HIGH,
-        gtk::LEVEL_BAR_OFFSET_FULL,
-    ] {
-        bar.remove_offset_value(Some(name));
-    }
-    bar.add_offset_value("usage-normal", 0.9);
-    bar.add_offset_value("usage-critical", 1.0);
-    bar
-}
-
 fn fill_usage(row: &gtk::ListBoxRow, bar: &gtk::LevelBar, location: gio::File) {
     glib::spawn_future_local(clone!(
         #[weak]
@@ -1031,31 +1052,11 @@ fn fill_usage(row: &gtk::ListBoxRow, bar: &gtk::LevelBar, location: gio::File) {
         #[weak]
         bar,
         async move {
-            let attributes = format!(
-                "{},{}",
-                gio::FILE_ATTRIBUTE_FILESYSTEM_SIZE,
-                gio::FILE_ATTRIBUTE_FILESYSTEM_FREE
-            );
-            let Ok(info) = location
-                .query_filesystem_info_future(&attributes, glib::Priority::LOW)
-                .await
-            else {
-                return;
-            };
-            let size = info.attribute_uint64(gio::FILE_ATTRIBUTE_FILESYSTEM_SIZE);
-            let free = info
-                .attribute_uint64(gio::FILE_ATTRIBUTE_FILESYSTEM_FREE)
-                .min(size);
-            if size == 0 {
-                return;
+            if let Some((size, free)) = volumes::usage(&location).await {
+                bar.set_value((size - free) as f64 / size as f64);
+                bar.set_visible(true);
+                row.set_tooltip_text(Some(&volumes::usage_text(size, free)));
             }
-            bar.set_value((size - free) as f64 / size as f64);
-            bar.set_visible(true);
-            row.set_tooltip_text(Some(
-                &gettext("{free} free of {size}")
-                    .replace("{free}", &format::size(free))
-                    .replace("{size}", &format::size(size)),
-            ));
         }
     ));
 }

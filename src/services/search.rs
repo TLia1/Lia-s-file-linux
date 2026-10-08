@@ -206,7 +206,8 @@ fn walk(
     );
 }
 
-fn is_skipped(folder: &gio::File) -> bool {
+/// Kernel interfaces that walks don't enter when reached from a parent.
+pub(crate) fn is_skipped(folder: &gio::File) -> bool {
     folder
         .path()
         .is_some_and(|path| SKIPPED_PATHS.iter().any(|p| path == Path::new(p)))

@@ -18,6 +18,7 @@ use crate::model::places;
 use crate::services::clipboard::clipboard_service;
 use crate::services::file_ops::{FileOpJob, JobState, Operation, queue};
 use crate::services::templates::templates_menu;
+use crate::services::terminal;
 use crate::util::settings;
 use crate::widgets::address_bar::AddressBar;
 use crate::widgets::details_pane::DetailsPane;
@@ -29,10 +30,6 @@ use crate::widgets::sidebar::Sidebar;
 /// Pane width limits (pixels), matching the GSettings ranges.
 const SIDEBAR_WIDTH: (f64, f64) = (180.0, 360.0);
 const DETAILS_PANE_WIDTH: (f64, f64) = (220.0, 480.0);
-
-/// Actions that arrive in later phases (properties in phase 6). They exist
-/// now so that buttons, menus and shortcuts are wired, but stay disabled.
-const PENDING_ACTIONS: [&str; 1] = ["properties"];
 
 /// The connections made to the active pane, undone when it changes.
 #[derive(Default)]
@@ -478,6 +475,59 @@ impl Window {
             "restore",
             trash && any && selected.iter().all(|i| i.trash_orig_path().is_some()),
         );
+        self.set_action_enabled("properties", !self.properties_targets().is_empty());
+        self.set_action_enabled("open-terminal", self.terminal_folder().is_some());
+    }
+
+    /// What Properties describes: the selection, or the current folder.
+    fn properties_targets(&self) -> Vec<gio::File> {
+        let Some(pane) = self.active_pane() else {
+            return Vec::new();
+        };
+        let selected = pane.selected_items();
+        if selected.is_empty() {
+            return pane
+                .location()
+                .filter(|_| !pane.is_this_pc())
+                .into_iter()
+                .collect();
+        }
+        if pane.is_trash() {
+            // The trashed items themselves, with their trash information.
+            selected.iter().map(|i| i.file().clone()).collect()
+        } else {
+            pane.selected_files()
+        }
+    }
+
+    fn show_properties(&self) {
+        let files = self.properties_targets();
+        dialogs::properties::PropertiesDialog::present_for(self, files);
+    }
+
+    /// The folder "Open in Terminal" opens: the selected folder, or the
+    /// current one. Only folders with a local path (or a GVfs FUSE path).
+    fn terminal_folder(&self) -> Option<std::path::PathBuf> {
+        let pane = self.active_pane()?;
+        let selected = pane.selected_items();
+        let folder = match selected.as_slice() {
+            [item] if item.is_dir() => FolderPane::folder_target(item),
+            _ => pane.location(),
+        }?;
+        if pane.is_this_pc() || pane.is_trash() {
+            return None;
+        }
+        folder.path()
+    }
+
+    fn open_terminal(&self) {
+        let Some(folder) = self.terminal_folder() else {
+            return;
+        };
+        if let Err(err) = terminal::open_in(&folder) {
+            tracing::warn!("cannot open a terminal: {err}");
+            self.show_toast(&gettext("Could not open a terminal: {}").replace("{}", err.message()));
+        }
     }
 
     fn sync_sort_actions(&self) {
@@ -783,6 +833,35 @@ impl Window {
                 pane.run_operation(Operation::Restore { files }, false);
             }),
             window_action("empty-trash", Self::empty_trash),
+            // Properties, terminal, servers
+            window_action("properties", Self::show_properties),
+            gio::ActionEntry::builder("location-properties")
+                .parameter_type(Some(glib::VariantTy::STRING))
+                .activate(|window: &Self, _, parameter| {
+                    if let Some(uri) = parameter.and_then(|p| p.get::<String>()) {
+                        dialogs::properties::PropertiesDialog::present_for(
+                            window,
+                            vec![gio::File::for_uri(&uri)],
+                        );
+                    }
+                })
+                .build(),
+            window_action("open-terminal", Self::open_terminal),
+            window_action("connect-to-server", |window| {
+                dialogs::connect_server::present(
+                    window,
+                    clone!(
+                        #[weak]
+                        window,
+                        move |location| {
+                            if let Some(pane) = window.active_pane() {
+                                pane.navigate_to(&location);
+                                pane.grab_focus();
+                            }
+                        }
+                    ),
+                );
+            }),
             window_action("pin", |window| {
                 let folders: Vec<gio::File> = window
                     .active_pane()
@@ -830,13 +909,6 @@ impl Window {
             }),
             tab_action("tab-move-to-window", Self::move_tab_to_new_window),
         ]);
-
-        // Implemented in later phases.
-        for name in PENDING_ACTIONS {
-            let action = gio::SimpleAction::new(name, None);
-            action.set_enabled(false);
-            self.add_action(&action);
-        }
 
         // Sorting: radio-style string states, synced from the active pane.
         let sort_by = gio::SimpleAction::new_stateful(
