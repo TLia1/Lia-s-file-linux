@@ -334,6 +334,15 @@ impl FileOpJob {
         let message = match operation.kind() {
             OpKind::Rename | OpKind::CreateFolder | OpKind::CreateFile => return None,
             _ if n == 0 => return None,
+            OpKind::BatchRename => {
+                ngettext("Renamed {n} item", "Renamed {n} items", n).replace("{n}", &n.to_string())
+            }
+            OpKind::Extract => counted(
+                n,
+                || gettext("Extracted “{name}”").replace("{name}", &one()),
+                ngettext("Extracted {n} archive", "Extracted {n} archives", n),
+            ),
+            OpKind::Compress => gettext("Created “{name}”").replace("{name}", &created_name(self)),
             OpKind::Copy => counted(
                 n,
                 || gettext("Copied “{name}” to “{to}”").replace("{name}", &one()),
@@ -388,6 +397,13 @@ impl FileOpJob {
     }
 }
 
+/// The name of the first item the job created.
+fn created_name(job: &FileOpJob) -> String {
+    job.with_outcome(|o| o.created.first().map(file_name))
+        .flatten()
+        .unwrap_or_default()
+}
+
 /// Names the item when there is one ("Moved “a.txt”…"), otherwise uses the
 /// translated count (`many`, with a `{n}` placeholder).
 fn counted(n: u32, one: impl FnOnce() -> String, many: String) -> String {
@@ -407,6 +423,7 @@ fn first_name(operation: &Operation) -> String {
             Operation::CreateFolder { name, .. } | Operation::CreateFile { name, .. } => {
                 Some(name.clone())
             }
+            Operation::Compress { target, .. } => Some(file_name(target)),
             _ => None,
         })
         .unwrap_or_default()
@@ -481,6 +498,27 @@ pub fn title(operation: &Operation) -> String {
         OpKind::Rename => gettext("Renaming “{name}”").replace("{name}", &one()),
         OpKind::CreateFolder | OpKind::CreateFile => {
             gettext("Creating “{name}”").replace("{name}", &one())
+        }
+        OpKind::BatchRename => {
+            ngettext("Renaming {n} item", "Renaming {n} items", n).replace("{n}", &n.to_string())
+        }
+        OpKind::Extract => pick(
+            gettext("Extracting “{name}”").replace("{name}", &one()),
+            ngettext("Extracting {n} archive", "Extracting {n} archives", n),
+        ),
+        OpKind::Compress => {
+            let Operation::Compress { target, .. } = operation else {
+                unreachable!()
+            };
+            pick(
+                gettext("Compressing “{name}” into “{archive}”").replace("{name}", &one()),
+                ngettext(
+                    "Compressing {n} item into “{archive}”",
+                    "Compressing {n} items into “{archive}”",
+                    n,
+                ),
+            )
+            .replace("{archive}", &file_name(target))
         }
     }
 }

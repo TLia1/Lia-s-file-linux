@@ -9,6 +9,7 @@ use std::sync::{Condvar, Mutex};
 
 use gtk::{gio, prelude::*};
 
+use crate::services::archives::ArchiveFormat;
 use crate::services::undo::UndoRecord;
 
 /// A file operation. Transfers take `(source, target)` pairs where the
@@ -57,6 +58,22 @@ pub enum Operation {
         name: String,
         template: Option<gio::File>,
     },
+    /// Renames several files at once; names may be swapped between them.
+    BatchRename {
+        renames: Vec<(gio::File, String)>,
+    },
+    /// Extracts each archive into `destination`: its single top-level item
+    /// directly, or several items into a folder named after the archive.
+    Extract {
+        archives: Vec<gio::File>,
+        destination: gio::File,
+    },
+    /// Creates the archive `target` (renamed if it exists) of `sources`.
+    Compress {
+        sources: Vec<gio::File>,
+        target: gio::File,
+        format: ArchiveFormat,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -72,6 +89,9 @@ pub enum OpKind {
     Rename,
     CreateFolder,
     CreateFile,
+    BatchRename,
+    Extract,
+    Compress,
 }
 
 impl Operation {
@@ -109,6 +129,9 @@ impl Operation {
             Self::Rename { .. } => OpKind::Rename,
             Self::CreateFolder { .. } => OpKind::CreateFolder,
             Self::CreateFile { .. } => OpKind::CreateFile,
+            Self::BatchRename { .. } => OpKind::BatchRename,
+            Self::Extract { .. } => OpKind::Extract,
+            Self::Compress { .. } => OpKind::Compress,
         }
     }
 
@@ -123,6 +146,9 @@ impl Operation {
             | Self::Delete { files }
             | Self::Restore { files } => files.clone(),
             Self::Rename { file, .. } => vec![file.clone()],
+            Self::BatchRename { renames } => renames.iter().map(|(f, _)| f.clone()).collect(),
+            Self::Extract { archives, .. } => archives.clone(),
+            Self::Compress { sources, .. } => sources.clone(),
             Self::EmptyTrash | Self::CreateFolder { .. } | Self::CreateFile { .. } => Vec::new(),
         }
     }
@@ -148,6 +174,15 @@ impl Operation {
                     .then_some(parent)
             }
             Self::Rename { file, .. } => file.parent(),
+            Self::BatchRename { renames } => {
+                let parent = renames.first()?.0.parent()?;
+                renames
+                    .iter()
+                    .all(|(f, _)| f.has_parent(Some(&parent)))
+                    .then_some(parent)
+            }
+            Self::Extract { destination, .. } => Some(destination.clone()),
+            Self::Compress { target, .. } => target.parent(),
             _ => None,
         }
     }
@@ -161,6 +196,9 @@ impl Operation {
             | Self::Delete { files }
             | Self::Restore { files } => files.len(),
             Self::EmptyTrash => 0,
+            Self::BatchRename { renames } => renames.len(),
+            Self::Extract { archives, .. } => archives.len(),
+            Self::Compress { sources, .. } => sources.len(),
             Self::Rename { .. } | Self::CreateFolder { .. } | Self::CreateFile { .. } => 1,
         }
     }
@@ -170,7 +208,11 @@ impl Operation {
     pub fn is_quick(&self) -> bool {
         matches!(
             self.kind(),
-            OpKind::Rename | OpKind::CreateFolder | OpKind::CreateFile | OpKind::Link
+            OpKind::Rename
+                | OpKind::BatchRename
+                | OpKind::CreateFolder
+                | OpKind::CreateFile
+                | OpKind::Link
         )
     }
 }

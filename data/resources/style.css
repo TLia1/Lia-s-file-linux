@@ -161,9 +161,36 @@ gridview.grid-view > child.drop-target {
   outline-offset: -2px;
 }
 
+/* Group headers (Group By), in the details view only */
+columnview.details-view > listview > header {
+  padding: 14px 12px 4px 12px;
+  border-bottom: 1px solid alpha(currentColor, 0.08);
+  margin-bottom: 2px;
+}
+
+columnview.details-view > listview > header:first-child {
+  padding-top: 6px;
+}
+
+.group-header .group-title {
+  font-weight: 600;
+  color: var(--accent-color);
+}
+
 /* Inline rename */
 popover.rename-popover > contents {
   padding: 6px;
+}
+
+/* Batch rename preview */
+list.rename-preview label.error {
+  color: var(--error-color);
+}
+
+/* Quick Look */
+.quick-look textview,
+.quick-look textview text {
+  background-color: var(--view-bg-color);
 }
 
 /* Secondary text (dates, types, sizes). Don't restyle libadwaita's

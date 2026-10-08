@@ -123,7 +123,9 @@ fn error_heading(kind: OpKind, name: &str) -> String {
         OpKind::Trash => gettext("Couldn't Move “{}” to the Trash"),
         OpKind::Delete | OpKind::EmptyTrash => gettext("Couldn't Delete “{}”"),
         OpKind::Restore => gettext("Couldn't Restore “{}”"),
-        OpKind::Rename => gettext("Couldn't Rename “{}”"),
+        OpKind::Rename | OpKind::BatchRename => gettext("Couldn't Rename “{}”"),
+        OpKind::Extract => gettext("Couldn't Extract “{}”"),
+        OpKind::Compress => gettext("Couldn't Compress “{}”"),
         OpKind::CreateFolder | OpKind::CreateFile => gettext("Couldn't Create “{}”"),
     }
     .replace("{}", name)
@@ -155,6 +157,32 @@ pub async fn confirm_delete(parent: &impl IsA<gtk::Widget>, count: usize, name: 
     dialog.set_default_response(Some("cancel"));
     dialog.set_close_response("cancel");
     dialog.choose_future(Some(parent)).await == "delete"
+}
+
+/// Asks before moving to the trash (when the setting is on).
+pub async fn confirm_trash(parent: &impl IsA<gtk::Widget>, count: usize, name: &str) -> bool {
+    let heading = if count == 1 {
+        gettext("Move “{}” to the Trash?").replace("{}", name)
+    } else {
+        ngettext(
+            "Move {} Item to the Trash?",
+            "Move {} Items to the Trash?",
+            count as u32,
+        )
+        .replace("{}", &count.to_string())
+    };
+    let dialog = adw::AlertDialog::new(
+        Some(&heading),
+        Some(&gettext("Items in the Trash can be restored.")),
+    );
+    dialog.add_responses(&[
+        ("cancel", &gettext("_Cancel")),
+        ("trash", &gettext("_Move to Trash")),
+    ]);
+    dialog.set_response_appearance("trash", adw::ResponseAppearance::Destructive);
+    dialog.set_default_response(Some("trash"));
+    dialog.set_close_response("cancel");
+    dialog.choose_future(Some(parent)).await == "trash"
 }
 
 pub async fn confirm_empty_trash(parent: &impl IsA<gtk::Widget>) -> bool {

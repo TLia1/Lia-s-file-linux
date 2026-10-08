@@ -498,7 +498,7 @@ async fn count_children(folder: &gio::File) -> Result<u32, glib::Error> {
 }
 
 /// The beginning of a text file.
-async fn read_text(file: &gio::File) -> Option<String> {
+pub async fn read_text(file: &gio::File) -> Option<String> {
     let stream = file.read_future(glib::Priority::LOW).await.ok()?;
     let (buffer, read, _) = stream
         .read_all_future(vec![0u8; TEXT_PREVIEW_BYTES], glib::Priority::LOW)

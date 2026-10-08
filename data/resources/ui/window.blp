@@ -18,6 +18,7 @@ template $LiaWindow: Adw.ApplicationWindow {
       new_content.label: "";
       restore_content.label: "";
       empty_trash_content.label: "";
+      extract_content.label: "";
       sort_content.label: "";
       view_content.label: "";
       search_entry.width-request: 160;
@@ -251,6 +252,23 @@ template $LiaWindow: Adw.ApplicationWindow {
           ]
         }
 
+        // Only while archives are selected
+        Button extract_button {
+          visible: false;
+          tooltip-text: _("Extract the selected archives here");
+          action-name: "win.extract-here";
+
+          child: Adw.ButtonContent extract_content {
+            icon-name: "package-x-generic-symbolic";
+            label: _("Extract");
+          };
+
+          styles [
+            "flat",
+            "labeled",
+          ]
+        }
+
         Separator {
           orientation: vertical;
         }
@@ -408,7 +426,7 @@ template $LiaWindow: Adw.ApplicationWindow {
           ToggleButton {
             icon-name: "view-list-symbolic";
             tooltip-text: _("Details (Ctrl+1)");
-            action-name: "win.default-view";
+            action-name: "win.view-mode";
             action-target: "'details'";
 
             styles [
@@ -419,7 +437,7 @@ template $LiaWindow: Adw.ApplicationWindow {
           ToggleButton {
             icon-name: "view-grid-symbolic";
             tooltip-text: _("Grid (Ctrl+2)");
-            action-name: "win.default-view";
+            action-name: "win.view-mode";
             action-target: "'grid'";
 
             styles [
@@ -470,6 +488,11 @@ menu primary_menu {
   }
 
   section {
+    item {
+      label: _("_Preferences");
+      action: "app.preferences";
+    }
+
     item {
       label: _("_Keyboard Shortcuts");
       action: "app.shortcuts";
@@ -542,6 +565,42 @@ menu sort_menu {
       label: _("_Folders First");
       action: "win.sort-folders-first";
     }
+
+    submenu {
+      label: _("_Group By");
+
+      section {
+        item {
+          label: _("_None");
+          action: "win.group-by";
+          target: "none";
+        }
+
+        item {
+          label: _("_Name");
+          action: "win.group-by";
+          target: "name";
+        }
+
+        item {
+          label: _("_Date Modified");
+          action: "win.group-by";
+          target: "modified";
+        }
+
+        item {
+          label: _("_Type");
+          action: "win.group-by";
+          target: "type";
+        }
+
+        item {
+          label: _("_Size");
+          action: "win.group-by";
+          target: "size";
+        }
+      }
+    }
   }
 }
 
@@ -549,13 +608,13 @@ menu view_menu {
   section {
     item {
       label: _("_Details");
-      action: "win.default-view";
+      action: "win.view-mode";
       target: "details";
     }
 
     item {
       label: _("_Grid");
-      action: "win.default-view";
+      action: "win.view-mode";
       target: "grid";
     }
   }
@@ -618,6 +677,16 @@ menu more_menu {
       label: _("Create _Link");
       action: "win.create-link";
     }
+
+    item {
+      label: _("Co_mpress…");
+      action: "win.compress";
+    }
+
+    item {
+      label: _("E_xtract To…");
+      action: "win.extract-to";
+    }
   }
 
   section {
@@ -655,6 +724,11 @@ menu more_menu {
   }
 
   section {
+    item {
+      label: _("_Quick Look");
+      action: "win.quick-look";
+    }
+
     item {
       label: _("P_roperties");
       action: "win.properties";

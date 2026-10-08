@@ -11,6 +11,10 @@
 //!
 //! File operations started from the pane (drops, renames…) go to the job
 //! queue; once done, what they created in this folder gets selected.
+//!
+//! The view mode, sort and grouping are per folder: changing them in a
+//! folder remembers them for it (see `model::view_settings`); other folders
+//! use the defaults.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::rc::Rc;
@@ -22,8 +26,10 @@ use gtk::{gdk, gio, glib, glib::clone, prelude::*, subclass::prelude::*};
 
 use crate::dialogs;
 use crate::model::directory_model::ATTRIBUTES;
+use crate::model::grouping::{self, GroupBy, Periods};
 use crate::model::places;
 use crate::model::search_filters::{DateRange, Filters, Kind, SizeRange};
+use crate::model::view_settings::{self, FolderView};
 use crate::model::{DirectoryModel, FileItem, History, sorting};
 use crate::services::file_ops::{FileOpJob, Operation, naming, queue};
 use crate::services::search::{self, Search};
@@ -167,6 +173,8 @@ mod imp {
         pub(super) pending_select: RefCell<Vec<gio::File>>,
         pub(super) pending_rename: Cell<bool>,
         pub(super) pending_timeout: RefCell<Option<glib::SourceId>>,
+        /// Applying a folder's view settings: changes aren't remembered.
+        pub(super) restoring_view: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -198,6 +206,8 @@ mod imp {
                     glib::subclass::Signal::builder("sort-changed").build(),
                     // The selected items (or the items themselves) changed.
                     glib::subclass::Signal::builder("selection-changed").build(),
+                    // The view mode or grouping changed.
+                    glib::subclass::Signal::builder("view-changed").build(),
                 ]
             })
         }
@@ -327,7 +337,10 @@ impl FolderPane {
         imp.file_view.connect_sort_changed(clone!(
             #[weak(rename_to = pane)]
             self,
-            move |_| pane.emit_by_name::<()>("sort-changed", &[])
+            move |_| {
+                pane.remember_view();
+                pane.emit_by_name::<()>("sort-changed", &[]);
+            }
         ));
         selection.connect_selection_changed(clone!(
             #[weak(rename_to = pane)]
@@ -373,9 +386,10 @@ impl FolderPane {
         imp.queue_handler.replace(Some(handler));
 
         // ── Settings ───────────────────────────────────────────────────────
-        imp.file_view
-            .set_mode(ViewMode::from_nick(&settings.string("default-view")));
+        imp.file_view.set_mode(default_view_mode());
         imp.file_view.set_icon_size(settings.int("icon-size"));
+        imp.file_view
+            .set_single_click(settings.boolean("single-click"));
 
         let handlers = vec![
             settings.connect_changed(
@@ -397,15 +411,31 @@ impl FolderPane {
                     )
                 ),
             ),
+            // Folders with their own view keep it.
             settings.connect_changed(
                 Some("default-view"),
+                clone!(
+                    #[weak(rename_to = pane)]
+                    self,
+                    move |_, _| {
+                        if pane
+                            .location()
+                            .is_some_and(|l| view_settings::lookup(&l).is_none())
+                        {
+                            pane.apply_view_settings();
+                        }
+                    }
+                ),
+            ),
+            settings.connect_changed(
+                Some("single-click"),
                 clone!(
                     #[weak(rename_to = pane)]
                     self,
                     move |settings, key| pane
                         .imp()
                         .file_view
-                        .set_mode(ViewMode::from_nick(&settings.string(key)))
+                        .set_single_click(settings.boolean(key))
                 ),
             ),
             settings.connect_changed(
@@ -584,6 +614,8 @@ impl FolderPane {
         imp.mounting.set(false);
         let this_pc = places::is_this_pc(location);
         imp.this_pc.set(this_pc);
+        // Before listing, so that items arrive in the right order.
+        self.apply_view_settings();
         if this_pc {
             imp.directory.clear();
         } else {
@@ -954,10 +986,21 @@ impl FolderPane {
         }
     }
 
-    /// Renames the first selected item in place.
+    /// Renames the selected item in place, or several in the batch rename
+    /// dialog.
     pub fn start_rename(&self) {
         let imp = self.imp();
-        let Some(item) = self.selected_items().into_iter().next() else {
+        let selected = self.selected_items();
+        if selected.len() > 1 {
+            dialogs::batch_rename::present(
+                self,
+                selected,
+                self.existing_names(),
+                imp.portable_names.get(),
+            );
+            return;
+        }
+        let Some(item) = selected.into_iter().next() else {
             return;
         };
         let sort_model = imp.sort_model.get().unwrap();
@@ -1005,6 +1048,24 @@ impl FolderPane {
         );
         imp.file_view
             .start_rename(position, &name, select, validate, commit);
+    }
+
+    /// The folder's file system needs Windows-compatible names.
+    pub fn portable_names(&self) -> bool {
+        self.imp().portable_names.get()
+    }
+
+    /// The (folder URI, name) pairs of the items listed, for checking new
+    /// names.
+    fn existing_names(&self) -> std::collections::HashSet<(String, String)> {
+        let imp = self.imp();
+        let Some(folder) = imp.directory.location().map(|l| l.uri().to_string()) else {
+            return Default::default();
+        };
+        (0..imp.directory.n_items())
+            .filter_map(|i| imp.directory.item(i).and_downcast::<FileItem>())
+            .map(|item| (folder.clone(), item.display_name().to_string()))
+            .collect()
     }
 
     /// Folders that aren't watched live (some network locations) are
@@ -1111,8 +1172,128 @@ impl FolderPane {
         selection.set_selection(&inverted, &gtk::Bitset::new_range(0, n));
     }
 
+    /// Moves the selection `delta` items away from the first selected one
+    /// (stepping through items in Quick Look) and returns the new item.
+    pub fn select_relative(&self, delta: i32) -> Option<FileItem> {
+        let imp = self.imp();
+        let selection = imp.selection.get()?;
+        let n = selection.n_items();
+        if n == 0 {
+            return None;
+        }
+        let bitset = selection.selection();
+        let next = if bitset.is_empty() {
+            0
+        } else {
+            (bitset.minimum() as i64 + delta as i64).clamp(0, n as i64 - 1) as u32
+        };
+        imp.file_view.scroll_to(next, true);
+        selection.item(next).and_downcast()
+    }
+
     pub fn sort_state(&self) -> (String, bool) {
         self.imp().file_view.sort_state()
+    }
+
+    pub fn view_mode(&self) -> ViewMode {
+        self.imp().file_view.mode()
+    }
+
+    /// Changes the view of this folder (remembered for it).
+    pub fn set_view_mode(&self, mode: ViewMode) {
+        if self.view_mode() == mode {
+            return;
+        }
+        self.imp().file_view.set_mode(mode);
+        self.remember_view();
+        self.emit_by_name::<()>("view-changed", &[]);
+    }
+
+    pub fn group_by(&self) -> GroupBy {
+        self.imp().file_view.group_by()
+    }
+
+    /// Groups this folder's items (remembered for it).
+    pub fn set_group_by(&self, group: GroupBy) {
+        if self.group_by() == group {
+            return;
+        }
+        self.apply_group_by(group);
+        self.remember_view();
+        self.emit_by_name::<()>("view-changed", &[]);
+    }
+
+    fn apply_group_by(&self, group: GroupBy) {
+        let imp = self.imp();
+        let periods = Periods::now();
+        imp.sort_model
+            .get()
+            .unwrap()
+            .set_section_sorter(grouping::section_sorter(group, periods).as_ref());
+        imp.file_view.set_group_by(group, periods);
+    }
+
+    /// Shows the folder the way it was last shown, or with the defaults.
+    fn apply_view_settings(&self) {
+        let imp = self.imp();
+        let Some(location) = self.location() else {
+            return;
+        };
+        let saved = (!imp.this_pc.get())
+            .then(|| view_settings::lookup(&location))
+            .flatten();
+        let (mode, sort, descending, group) = match saved {
+            Some(view) => (
+                ViewMode::from_nick(&view.view),
+                view.sort,
+                view.descending,
+                GroupBy::from_nick(&view.group),
+            ),
+            None => (default_view_mode(), "name".to_owned(), false, GroupBy::None),
+        };
+        imp.restoring_view.set(true);
+        imp.file_view.set_mode(mode);
+        if self.sort_state() != (sort.clone(), descending) {
+            imp.file_view.set_sort(&sort, descending);
+        }
+        if self.group_by() != group {
+            self.apply_group_by(group);
+        }
+        imp.restoring_view.set(false);
+        self.emit_by_name::<()>("view-changed", &[]);
+    }
+
+    /// Remembers the folder's view mode, sort and grouping; folders shown
+    /// with the defaults are forgotten.
+    fn remember_view(&self) {
+        let imp = self.imp();
+        if imp.restoring_view.get() || imp.this_pc.get() || imp.recursive.get() {
+            return;
+        }
+        let Some(location) = self.location() else {
+            return;
+        };
+        let mode = self.view_mode();
+        let (sort, descending) = self.sort_state();
+        let group = self.group_by();
+        let is_default =
+            mode == default_view_mode() && sort == "name" && !descending && group == GroupBy::None;
+        let view = FolderView {
+            view: mode.nick().to_owned(),
+            sort,
+            descending,
+            group: group.nick().to_owned(),
+            used: 0,
+        };
+        view_settings::remember(&location, (!is_default).then_some(view));
+    }
+
+    pub fn connect_view_changed<F: Fn(&Self) + 'static>(&self, f: F) -> glib::SignalHandlerId {
+        self.connect_closure(
+            "view-changed",
+            false,
+            glib::closure_local!(move |pane: &Self| f(pane)),
+        )
     }
 
     pub fn set_sort(&self, id: &str, descending: bool) {
@@ -1637,6 +1818,10 @@ impl FolderPane {
             window.show_toast(message);
         }
     }
+}
+
+fn default_view_mode() -> ViewMode {
+    ViewMode::from_nick(&settings().string("default-view"))
 }
 
 /// A short user-facing name for a location ("Home", "Documents", "/").

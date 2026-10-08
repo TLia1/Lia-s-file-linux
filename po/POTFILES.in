@@ -23,3 +23,15 @@ src/services/terminal.rs
 src/services/volumes.rs
 src/widgets/app_chooser.rs
 src/widgets/this_pc.rs
+src/dialogs/batch_rename.rs
+src/dialogs/compress.rs
+src/dialogs/file_ops.rs
+src/dialogs/preferences.rs
+src/dialogs/quick_look.rs
+src/model/grouping.rs
+src/services/archives/mod.rs
+src/services/batch_rename.rs
+src/services/file_ops/engine/archive.rs
+src/services/file_ops/engine/batch_rename.rs
+src/services/file_ops/job.rs
+src/services/undo.rs

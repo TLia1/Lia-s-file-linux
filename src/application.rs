@@ -5,6 +5,8 @@ use gettextrs::gettext;
 use gtk::{gio, glib, subclass::prelude::*};
 
 use crate::config;
+use crate::dialogs;
+use crate::model::view_settings;
 use crate::services::file_ops::queue;
 use crate::services::undo::undo_manager;
 use crate::util::settings;
@@ -34,6 +36,7 @@ mod imp {
             self.parent_startup();
             let app = self.obj();
             fix_font_rendering();
+            follow_color_scheme();
             app.setup_actions();
             app.setup_accels();
         }
@@ -41,10 +44,21 @@ mod imp {
         fn activate(&self) {
             self.parent_activate();
             let app = self.obj();
-            if !self.started.replace(true) && app.restore_session() {
+            let first = !self.started.replace(true);
+            if first && app.restore_session() {
                 return;
             }
-            app.new_window(&gio::File::for_path(glib::home_dir()));
+            let location = if first && settings().string("start-location") == "recent" {
+                gio::File::for_uri("recent:///")
+            } else {
+                gio::File::for_path(glib::home_dir())
+            };
+            app.new_window(&location);
+        }
+
+        fn shutdown(&self) {
+            view_settings::flush();
+            self.parent_shutdown();
         }
 
         fn open(&self, files: &[gio::File], _hint: &str) {
@@ -195,6 +209,11 @@ impl Application {
             gio::ActionEntry::builder("shortcuts")
                 .activate(|app: &Self, _, _| app.show_shortcuts())
                 .build(),
+            gio::ActionEntry::builder("preferences")
+                .activate(|app: &Self, _, _| {
+                    dialogs::preferences::present(app.active_window().as_ref())
+                })
+                .build(),
             gio::ActionEntry::builder("about")
                 .activate(|app: &Self, _, _| app.show_about())
                 .build(),
@@ -228,6 +247,7 @@ impl Application {
             ("app.quit", &["<Control>q"]),
             ("app.new-window", &["<Control>n"]),
             ("app.shortcuts", &["<Control>question"]),
+            ("app.preferences", &["<Control>comma"]),
             ("window.close", &["<Control><Shift>w"]),
             ("win.new-tab", &["<Control>t"]),
             ("win.close-tab", &["<Control>w"]),
@@ -243,8 +263,8 @@ impl Application {
             ("win.focus-location", &["<Control>l", "<Alt>d"]),
             ("win.focus-search", &["<Control>f", "<Control>e"]),
             ("win.show-hidden", &["<Control>h"]),
-            ("win.default-view::details", &["<Control>1"]),
-            ("win.default-view::grid", &["<Control>2"]),
+            ("win.view-mode::details", &["<Control>1"]),
+            ("win.view-mode::grid", &["<Control>2"]),
             (
                 "win.zoom-in",
                 &["<Control>plus", "<Control>equal", "<Control>KP_Add"],
@@ -276,6 +296,21 @@ impl Application {
             .build();
         dialog.present(self.active_window().as_ref());
     }
+}
+
+/// Applies the `color-scheme` setting, now and when it changes.
+fn follow_color_scheme() {
+    let apply = |settings: &gio::Settings| {
+        let scheme = match settings.string("color-scheme").as_str() {
+            "light" => adw::ColorScheme::ForceLight,
+            "dark" => adw::ColorScheme::ForceDark,
+            _ => adw::ColorScheme::Default,
+        };
+        adw::StyleManager::default().set_color_scheme(scheme);
+    };
+    let settings = settings();
+    apply(&settings);
+    settings.connect_changed(Some("color-scheme"), move |settings, _| apply(settings));
 }
 
 /// Works around a GTK bug at fractional scales (e.g. 115 %): in the default

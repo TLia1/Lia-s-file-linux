@@ -14,6 +14,11 @@
 //! - Moves try an instant rename first and fall back to copy + delete; a
 //!   source is deleted only once everything in it was copied.
 //! - Nothing is overwritten without the user choosing "Replace".
+//! - Archives are extracted into a hidden folder first, and created under
+//!   a `.part` name (see [`archive`]).
+
+mod archive;
+mod batch_rename;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -46,6 +51,7 @@ pub fn run(operation: &Operation, control: &Control, ui: &dyn Interaction) -> Ou
         created: Vec::new(),
         moved: Vec::new(),
         trashed: Vec::new(),
+        renamed: Vec::new(),
         errors: Vec::new(),
         skipped: 0,
         succeeded: 0,
@@ -168,6 +174,9 @@ struct Runner<'a> {
     /// Items moved or renamed: (from, to).
     moved: Vec<(gio::File, gio::File)>,
     trashed: Vec<gio::File>,
+    /// Batch renames done: (original file, original name, final file,
+    /// final name).
+    renamed: Vec<(gio::File, String, gio::File, String)>,
     errors: Vec<String>,
     skipped: u32,
     succeeded: u32,
@@ -203,6 +212,16 @@ impl Runner<'_> {
                 name,
                 template,
             } => self.run_create(parent, name, template.as_ref(), false),
+            Operation::BatchRename { renames } => self.run_batch_rename(renames),
+            Operation::Extract {
+                archives,
+                destination,
+            } => self.run_extract(archives, destination),
+            Operation::Compress {
+                sources,
+                target,
+                format,
+            } => self.run_compress(sources, target, *format),
         }
     }
 
@@ -220,7 +239,11 @@ impl Runner<'_> {
                 .collect(),
         };
         let record = match operation {
-            Operation::Copy { .. } | Operation::Duplicate { .. } | Operation::Link { .. }
+            Operation::Copy { .. }
+            | Operation::Duplicate { .. }
+            | Operation::Link { .. }
+            | Operation::Extract { .. }
+            | Operation::Compress { .. }
                 if !self.created.is_empty() =>
             {
                 UndoRecord::new(operation.clone(), trash_created())
@@ -234,6 +257,22 @@ impl Runner<'_> {
             Operation::Rename { .. } if !self.moved.is_empty() => {
                 UndoRecord::new(operation.clone(), reversed())
             }
+            Operation::BatchRename { .. } if !self.renamed.is_empty() => UndoRecord::new(
+                Operation::BatchRename {
+                    renames: self
+                        .renamed
+                        .iter()
+                        .map(|(from, _, _, name)| (from.clone(), name.clone()))
+                        .collect(),
+                },
+                Operation::BatchRename {
+                    renames: self
+                        .renamed
+                        .iter()
+                        .map(|(_, name, to, _)| (to.clone(), name.clone()))
+                        .collect(),
+                },
+            ),
             Operation::Trash { .. } if !self.trashed.is_empty() => UndoRecord::new(
                 Operation::Trash {
                     files: self.trashed.clone(),

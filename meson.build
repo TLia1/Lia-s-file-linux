@@ -13,6 +13,7 @@ app_id = 'io.github.lia.Files'
 dependency('gtk4', version: '>= 4.20')
 dependency('libadwaita-1', version: '>= 1.8')
 dependency('gtksourceview-5', version: '>= 5.10')
+dependency('libarchive', version: '>= 3.6')
 
 find_program('cargo')
 find_program('blueprint-compiler')

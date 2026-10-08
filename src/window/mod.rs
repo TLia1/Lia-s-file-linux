@@ -14,6 +14,7 @@ use gtk::{gdk, gio, glib, glib::clone, subclass::prelude::*};
 
 use crate::application::Application;
 use crate::dialogs;
+use crate::model::grouping::GroupBy;
 use crate::model::places;
 use crate::services::clipboard::clipboard_service;
 use crate::services::file_ops::{FileOpJob, JobState, Operation, queue};
@@ -23,6 +24,7 @@ use crate::util::settings;
 use crate::widgets::address_bar::AddressBar;
 use crate::widgets::details_pane::DetailsPane;
 use crate::widgets::dnd;
+use crate::widgets::file_view::{self, ViewMode};
 use crate::widgets::folder_pane::{self, FolderPane};
 use crate::widgets::operations_popover::OperationsButton;
 use crate::widgets::sidebar::Sidebar;
@@ -91,6 +93,8 @@ mod imp {
         pub(super) trash_button: TemplateChild<gtk::Button>,
         #[template_child]
         pub(super) delete_button: TemplateChild<gtk::Button>,
+        #[template_child]
+        pub(super) extract_button: TemplateChild<gtk::Button>,
 
         /// Handlers on app-wide services, removed when the window goes.
         pub(super) service_handlers: RefCell<Vec<(glib::Object, glib::SignalHandlerId)>>,
@@ -357,7 +361,9 @@ impl Window {
                 self,
                 move |pane| window.sync_search_entry(pane)
             )),
-            pane.connect_n_selected_notify(clone!(
+            // Not just the count: which items are selected matters too
+            // (folders, archives…).
+            pane.connect_selection_changed(clone!(
                 #[weak(rename_to = window)]
                 self,
                 move |_| window.update_selection_actions()
@@ -376,6 +382,11 @@ impl Window {
                 #[weak(rename_to = window)]
                 self,
                 move |_| window.sync_sort_actions()
+            )),
+            pane.connect_view_changed(clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |_| window.sync_view_actions()
             )),
         ];
         let bind = |property: &str, label: &gtk::Label| {
@@ -398,6 +409,7 @@ impl Window {
         self.sync_search_entry(&pane);
         self.update_selection_actions();
         self.sync_sort_actions();
+        self.sync_view_actions();
         imp.details_pane.set_folder_pane(Some(&pane));
         pane.grab_focus();
     }
@@ -430,6 +442,22 @@ impl Window {
         imp.empty_trash_button.set_visible(trash);
         imp.delete_button.set_visible(trash);
         self.update_selection_actions();
+    }
+
+    /// The view mode and grouping of the active pane, in the actions.
+    fn sync_view_actions(&self) {
+        let Some(pane) = self.active_pane() else {
+            return;
+        };
+        // `set_state` doesn't emit `change-state`.
+        for (name, state) in [
+            ("view-mode", pane.view_mode().nick()),
+            ("group-by", pane.group_by().nick()),
+        ] {
+            if let Some(action) = self.lookup_action(name).and_downcast::<gio::SimpleAction>() {
+                action.set_state(&state.to_variant());
+            }
+        }
     }
 
     fn sync_search_entry(&self, pane: &FolderPane) {
@@ -477,6 +505,16 @@ impl Window {
         );
         self.set_action_enabled("properties", !self.properties_targets().is_empty());
         self.set_action_enabled("open-terminal", self.terminal_folder().is_some());
+        self.set_action_enabled("quick-look", any);
+
+        // Archives: local files only (libarchive works on paths).
+        let local = any && selected.iter().all(|i| i.target_file().path().is_some());
+        let archives = local && !trash && file_view::all_archives(&selected);
+        let here_local = pane.location().is_some_and(|l| l.path().is_some());
+        self.set_action_enabled("compress", local && writable && here_local && !trash);
+        self.set_action_enabled("extract-here", archives && writable && here_local);
+        self.set_action_enabled("extract-to", archives);
+        self.imp().extract_button.set_visible(archives);
     }
 
     /// What Properties describes: the selection, or the current folder.
@@ -872,7 +910,25 @@ impl Window {
                     .collect();
                 window.imp().sidebar.pin(&folders);
             }),
+            // Archives
+            window_action("compress", Self::compress_selection),
+            pane_action("extract-here", |pane| {
+                if let Some(destination) = pane.location() {
+                    let archives = pane.selected_files();
+                    pane.run_operation(
+                        Operation::Extract {
+                            archives,
+                            destination,
+                        },
+                        false,
+                    );
+                }
+            }),
+            pane_action("extract-to", |pane| {
+                dialogs::compress::extract_to(pane, pane.selected_files());
+            }),
             // View
+            pane_action("quick-look", dialogs::quick_look::present),
             pane_action("zoom-in", |pane| pane.zoom(1)),
             pane_action("zoom-out", |pane| pane.zoom(-1)),
             pane_action("zoom-reset", FolderPane::zoom_reset),
@@ -942,6 +998,32 @@ impl Window {
         self.add_action(&sort_by);
         self.add_action(&sort_order);
 
+        // Per-folder view mode and grouping, synced from the active pane.
+        for (name, initial) in [("view-mode", "details"), ("group-by", "none")] {
+            let action = gio::SimpleAction::new_stateful(
+                name,
+                Some(glib::VariantTy::STRING),
+                &initial.to_variant(),
+            );
+            action.connect_change_state(clone!(
+                #[weak(rename_to = window)]
+                self,
+                move |action, state| {
+                    let (Some(state), Some(pane)) = (state, window.active_pane()) else {
+                        return;
+                    };
+                    action.set_state(state);
+                    let nick = state.get::<String>().unwrap_or_default();
+                    if action.name() == "view-mode" {
+                        pane.set_view_mode(ViewMode::from_nick(&nick));
+                    } else {
+                        pane.set_group_by(GroupBy::from_nick(&nick));
+                    }
+                }
+            ));
+            self.add_action(&action);
+        }
+
         self.add_action(&gio::PropertyAction::new(
             "toggle-sidebar",
             &*self.imp().split_view,
@@ -955,7 +1037,7 @@ impl Window {
 
         // Stateful actions backed directly by GSettings.
         let settings = settings();
-        for key in ["show-hidden", "sort-folders-first", "default-view"] {
+        for key in ["show-hidden", "sort-folders-first"] {
             self.add_action(&settings.create_action(key));
         }
     }
@@ -1092,9 +1174,45 @@ impl Window {
             return;
         }
         let files = pane.selected_files();
-        if !files.is_empty() {
-            pane.run_operation(Operation::Trash { files }, false);
+        if files.is_empty() {
+            return;
         }
+        if !settings().boolean("confirm-trash") {
+            pane.run_operation(Operation::Trash { files }, false);
+            return;
+        }
+        let name = pane
+            .selected_items()
+            .first()
+            .map(|i| i.display_name().to_string())
+            .unwrap_or_default();
+        glib::spawn_future_local(clone!(
+            #[weak(rename_to = window)]
+            self,
+            async move {
+                if dialogs::file_ops::confirm_trash(&window, files.len(), &name).await {
+                    pane.run_operation(Operation::Trash { files }, false);
+                }
+            }
+        ));
+    }
+
+    /// Asks for an archive name and format, then compresses the selection
+    /// into the current folder.
+    fn compress_selection(&self) {
+        let Some(pane) = self.active_pane() else {
+            return;
+        };
+        let items = pane.selected_items();
+        if items.is_empty() {
+            return;
+        }
+        let names: Vec<(String, bool)> = items
+            .iter()
+            .map(|i| (i.display_name().to_string(), i.is_dir()))
+            .collect();
+        let files = pane.selected_files();
+        dialogs::compress::present(&pane, files, &names, pane.portable_names());
     }
 
     /// Shift+Delete: permanently, after confirmation.

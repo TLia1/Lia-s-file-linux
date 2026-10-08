@@ -5,6 +5,10 @@
 //! It also handles what happens *on* the items: context menus, dragging
 //! files out, dropping files on folders or on the background (emitted as
 //! `drop-files`), dimming cut files, and the inline rename popover.
+//!
+//! When grouped (see [`FileView::set_group_by`]), the details view shows a
+//! header above each group. `GridView` has no sections: the grid shows the
+//! same order, without headers.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::rc::Rc;
@@ -13,7 +17,9 @@ use std::sync::OnceLock;
 use gettextrs::gettext;
 use gtk::{gdk, gio, glib, glib::clone, prelude::*, subclass::prelude::*};
 
+use crate::model::grouping::{self, GroupBy, Periods};
 use crate::model::{FileItem, sorting};
+use crate::services::archives;
 use crate::services::clipboard::clipboard_service;
 use crate::util::format;
 use crate::widgets::dnd;
@@ -36,6 +42,13 @@ impl ViewMode {
         match nick {
             "grid" => Self::Grid,
             _ => Self::Details,
+        }
+    }
+
+    pub fn nick(self) -> &'static str {
+        match self {
+            Self::Details => "details",
+            Self::Grid => "grid",
         }
     }
 }
@@ -74,6 +87,9 @@ mod imp {
         pub(super) context_menu: OnceCell<gtk::PopoverMenu>,
         pub(super) icon_size: Cell<i32>,
         pub(super) mode: Cell<ViewMode>,
+        pub(super) group_by: Cell<GroupBy>,
+        /// The date periods the groups were computed with.
+        pub(super) periods: Cell<Option<Periods>>,
         /// The folder shown: the target of drops on the background.
         pub(super) location: RefCell<Option<gio::File>>,
         pub(super) accepts_drops: Cell<bool>,
@@ -287,14 +303,41 @@ impl FileView {
         }
         let had_focus = self.focus_child().is_some();
         imp.mode.set(mode);
-        let name = match mode {
-            ViewMode::Details => "details",
-            ViewMode::Grid => "grid",
-        };
-        imp.stack.get().unwrap().set_visible_child_name(name);
+        imp.stack.get().unwrap().set_visible_child_name(mode.nick());
         if had_focus {
             self.grab_focus();
         }
+    }
+
+    pub fn group_by(&self) -> GroupBy {
+        self.imp().group_by.get()
+    }
+
+    /// Shows a header above each group in the details view. The sort
+    /// model's section sorter (made with the same `periods`) does the
+    /// grouping.
+    pub fn set_group_by(&self, group: GroupBy, periods: Periods) {
+        let imp = self.imp();
+        imp.group_by.set(group);
+        imp.periods.set(Some(periods));
+        let factory = (group != GroupBy::None).then(|| self.header_factory());
+        imp.column_view
+            .get()
+            .unwrap()
+            .set_header_factory(factory.as_ref());
+    }
+
+    /// Opens items with a single click instead of a double click.
+    pub fn set_single_click(&self, single: bool) {
+        let imp = self.imp();
+        imp.column_view
+            .get()
+            .unwrap()
+            .set_single_click_activate(single);
+        imp.grid_view
+            .get()
+            .unwrap()
+            .set_single_click_activate(single);
     }
 
     /// The folder shown, where files dropped on the background go.
@@ -711,6 +754,53 @@ impl FileView {
         factory
     }
 
+    /// Group headers: the group's name and its number of items.
+    fn header_factory(&self) -> gtk::SignalListItemFactory {
+        let factory = gtk::SignalListItemFactory::new();
+        factory.connect_setup(|_, header| {
+            let header = header.downcast_ref::<gtk::ListHeader>().unwrap();
+            let title = gtk::Label::builder()
+                .xalign(0.0)
+                .ellipsize(gtk::pango::EllipsizeMode::End)
+                .css_classes(["group-title"])
+                .build();
+            let count = gtk::Label::builder()
+                .xalign(0.0)
+                .css_classes(["secondary", "numeric"])
+                .build();
+            let row = gtk::Box::builder()
+                .spacing(8)
+                .css_classes(["group-header"])
+                .build();
+            row.append(&title);
+            row.append(&count);
+            header
+                .bind_property("n-items", &count, "label")
+                .transform_to(|_, n: u32| Some(n.to_string()))
+                .sync_create()
+                .build();
+            header.set_child(Some(&row));
+        });
+        factory.connect_bind(clone!(
+            #[weak(rename_to = view)]
+            self,
+            move |_, header| {
+                let header = header.downcast_ref::<gtk::ListHeader>().unwrap();
+                let (Some(item), Some(title)) = (
+                    header.item().and_downcast::<FileItem>(),
+                    header.child().and_then(|row| row.first_child()),
+                ) else {
+                    return;
+                };
+                let imp = view.imp();
+                let periods = imp.periods.get().unwrap_or_else(Periods::now);
+                let label = grouping::group_label(imp.group_by.get(), &item, &periods);
+                title.downcast::<gtk::Label>().unwrap().set_label(&label);
+            }
+        ));
+        factory
+    }
+
     fn grid_factory(&self) -> gtk::SignalListItemFactory {
         let icon_size = self.icon_size();
         let factory = gtk::SignalListItemFactory::new();
@@ -810,7 +900,8 @@ impl FileView {
                     let _ = view.activate_action("win.open-in-new-tab", None);
                 } else {
                     let widget = gesture.widget().unwrap();
-                    let menu = item_menu(view.imp().trash_mode.get());
+                    let archives = all_archives(&view.selected_items());
+                    let menu = item_menu(view.imp().trash_mode.get(), archives);
                     view.popup_menu(&menu, &widget, x, y);
                 }
             }
@@ -1406,12 +1497,23 @@ fn deletion_time(item: &FileItem) -> i64 {
         .map_or(0, |date| date.to_unix())
 }
 
+/// Whether `items` are all archives that can be extracted.
+pub fn all_archives(items: &[FileItem]) -> bool {
+    !items.is_empty()
+        && items.iter().all(|item| {
+            !item.is_dir()
+                && item
+                    .content_type()
+                    .is_some_and(|t| archives::is_extractable(&t))
+        })
+}
+
 fn fallback_icon() -> gio::Icon {
     gio::ThemedIcon::new("text-x-generic").upcast()
 }
 
 /// Shortcuts that act on the file view's selection.
-const VIEW_SHORTCUTS: [(&str, &str); 11] = [
+const VIEW_SHORTCUTS: [(&str, &str); 12] = [
     ("BackSpace", "win.back"),
     ("<Control>Return", "win.open-in-new-tab"),
     ("<Control>x", "win.cut"),
@@ -1423,6 +1525,7 @@ const VIEW_SHORTCUTS: [(&str, &str); 11] = [
     ("KP_Delete", "win.trash"),
     ("<Shift>Delete", "win.delete"),
     ("<Alt>Return", "win.properties"),
+    ("space", "win.quick-look"),
 ];
 
 fn section(items: &[(String, &str)]) -> gio::Menu {
@@ -1433,7 +1536,7 @@ fn section(items: &[(String, &str)]) -> gio::Menu {
     menu
 }
 
-fn item_menu(trash: bool) -> gio::Menu {
+fn item_menu(trash: bool, archives: bool) -> gio::Menu {
     let menu = gio::Menu::new();
     if trash {
         menu.append_section(
@@ -1477,6 +1580,16 @@ fn item_menu(trash: bool) -> gio::Menu {
             (gettext("Move to _Trash"), "win.trash"),
         ]),
     );
+    let archive_section = if archives {
+        section(&[
+            (gettext("E_xtract Here"), "win.extract-here"),
+            (gettext("Extract _To…"), "win.extract-to"),
+            (gettext("Co_mpress…"), "win.compress"),
+        ])
+    } else {
+        section(&[(gettext("Co_mpress…"), "win.compress")])
+    };
+    menu.append_section(None, &archive_section);
     menu.append_section(
         None,
         &section(&[
@@ -1499,14 +1612,15 @@ fn background_menu(trash: bool) -> gio::Menu {
     submenus.append_submenu(
         Some(&gettext("_View")),
         &section(&[
-            (gettext("_Details"), "win.default-view::details"),
-            (gettext("_Grid"), "win.default-view::grid"),
+            (gettext("_Details"), "win.view-mode::details"),
+            (gettext("_Grid"), "win.view-mode::grid"),
         ]),
     );
     let sort = gio::Menu::new();
     sort.append_section(None, &sort_by_section());
     sort.append_section(None, &sort_order_section());
     submenus.append_submenu(Some(&gettext("_Sort By")), &sort);
+    submenus.append_submenu(Some(&gettext("_Group By")), &group_by_section());
     if !trash {
         let new = section(&[
             (gettext("_Folder"), "win.new-folder"),
@@ -1569,6 +1683,17 @@ fn sort_by_section() -> gio::Menu {
         (gettext("_Date Modified"), "win.sort-by::modified"),
         (gettext("_Type"), "win.sort-by::type"),
         (gettext("_Size"), "win.sort-by::size"),
+    ])
+}
+
+/// "Group By" choices, for the `win.group-by` action.
+pub fn group_by_section() -> gio::Menu {
+    section(&[
+        (gettext("_None"), "win.group-by::none"),
+        (gettext("_Name"), "win.group-by::name"),
+        (gettext("_Date Modified"), "win.group-by::modified"),
+        (gettext("_Type"), "win.group-by::type"),
+        (gettext("_Size"), "win.group-by::size"),
     ])
 }
 

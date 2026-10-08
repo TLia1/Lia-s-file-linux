@@ -11,7 +11,40 @@
     <value nick="never" value="2"/>
   </enum>
 
+  <enum id="io.github.lia.Files.ColorScheme">
+    <value nick="system" value="0"/>
+    <value nick="light" value="1"/>
+    <value nick="dark" value="2"/>
+  </enum>
+
+  <enum id="io.github.lia.Files.StartLocation">
+    <value nick="home" value="0"/>
+    <value nick="recent" value="1"/>
+  </enum>
+
+  <enum id="io.github.lia.Files.ArchiveFormat">
+    <value nick="zip" value="0"/>
+    <value nick="tar-gz" value="1"/>
+    <value nick="tar-xz" value="2"/>
+    <value nick="7z" value="3"/>
+  </enum>
+
   <schema id="io.github.lia.Files" path="/io/github/lia/Files/">
+    <!-- Appearance & behaviour -->
+    <key name="color-scheme" enum="io.github.lia.Files.ColorScheme">
+      <default>'system'</default>
+      <summary>Light or dark style</summary>
+      <description>“system” follows the desktop's preference.</description>
+    </key>
+    <key name="single-click" type="b">
+      <default>false</default>
+      <summary>Open items with a single click</summary>
+    </key>
+    <key name="confirm-trash" type="b">
+      <default>false</default>
+      <summary>Ask before moving items to the Trash</summary>
+    </key>
+
     <!-- Window state -->
     <key name="window-width" type="i">
       <default>1200</default>
@@ -32,6 +65,11 @@
     </key>
 
     <!-- Session -->
+    <key name="start-location" enum="io.github.lia.Files.StartLocation">
+      <default>'home'</default>
+      <summary>Folder opened in new windows at startup</summary>
+      <description>Used when the last session isn't restored.</description>
+    </key>
     <key name="restore-session" type="b">
       <default>true</default>
       <summary>Reopen the tabs of the last session on startup</summary>
@@ -49,6 +87,7 @@
     <key name="default-view" enum="io.github.lia.Files.ViewMode">
       <default>'details'</default>
       <summary>Default view mode</summary>
+      <description>Used for folders whose view hasn't been changed; changes made in a folder are remembered for it.</description>
     </key>
     <key name="icon-size" type="i">
       <range min="32" max="256"/>
@@ -90,6 +129,12 @@
       <default>1</default>
       <summary>File operations run at the same time on one device</summary>
       <description>Copies and moves to the same drive run one after another by default, which is fastest on most disks. Operations on different drives always run in parallel.</description>
+    </key>
+
+    <key name="compress-format" enum="io.github.lia.Files.ArchiveFormat">
+      <default>'zip'</default>
+      <summary>Format of new archives</summary>
+      <description>The format last chosen in the Compress dialog.</description>
     </key>
 
     <!-- Network -->
