@@ -232,7 +232,8 @@ impl DetailsPane {
     fn show_item(&self, item: &FileItem) {
         let imp = self.imp();
         imp.preview_image.set_item(Some(item));
-        imp.name_label.set_label(&item.display_name());
+        imp.name_label
+            .set_label(&format::one_line(&item.display_name()));
         let type_description = if item.is_dir() {
             gettext("Folder")
         } else {

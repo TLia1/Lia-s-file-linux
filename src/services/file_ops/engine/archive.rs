@@ -140,6 +140,7 @@ impl Runner<'_> {
             return Ok(false);
         };
         let cancellable = self.control.cancellable().clone();
+        self.control.note_temporary(&temp);
         loop {
             if self
                 .attempt(&temp, || temp.make_directory(Some(&cancellable)))?
@@ -354,6 +355,7 @@ impl Runner<'_> {
             )?;
             return Ok(());
         };
+        self.control.note_temporary(&gio::File::for_path(&part));
         loop {
             let scratch = Scratch(part.clone());
             match self.write_archive(&part, format, &items)? {

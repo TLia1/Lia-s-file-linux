@@ -225,6 +225,7 @@ pub fn usage_bar() -> gtk::LevelBar {
         .visible(false)
         .css_classes(["usage-bar"])
         .build();
+    bar.update_property(&[gtk::accessible::Property::Label(&gettext("Used space"))]);
     for name in [
         gtk::LEVEL_BAR_OFFSET_LOW,
         gtk::LEVEL_BAR_OFFSET_HIGH,

@@ -9,18 +9,25 @@
 //! the redo stack. Redoing runs `forward` again, which yields a fresh record
 //! (names may differ the second time) that goes back on the undo stack.
 //! Permanent deletion is never recorded.
+//!
+//! The history is saved to `$XDG_STATE_HOME/lia-files/undo.json` after each
+//! change, so that an action can still be undone after a restart or a
+//! crash.
 
 use std::cell::{Cell, OnceCell, RefCell};
+use std::sync::Arc;
 
 use gettextrs::gettext;
 use gtk::{glib, prelude::*, subclass::prelude::*};
+use serde::{Deserialize, Serialize};
 
 use crate::services::file_ops::{OpKind, Operation};
+use crate::util::persist::StateFile;
 
 /// Oldest records are dropped beyond this.
 const MAX_RECORDS: usize = 100;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UndoRecord {
     pub forward: Operation,
     pub inverse: Operation,
@@ -51,13 +58,27 @@ impl UndoRecord {
 }
 
 /// The two stacks, without any GTK.
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct UndoStack {
+    #[serde(default)]
     undo: Vec<UndoRecord>,
+    #[serde(default)]
     redo: Vec<UndoRecord>,
 }
 
 impl UndoStack {
+    /// Reads a saved history; a damaged one gives an empty history.
+    pub fn parse(json: &str) -> Self {
+        serde_json::from_str(json).unwrap_or_else(|err| {
+            tracing::warn!("ignoring unreadable undo history: {err}");
+            Self::default()
+        })
+    }
+
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(self).unwrap_or_default()
+    }
+
     /// A new user action: it can be undone, and the redo history is gone.
     pub fn record(&mut self, record: UndoRecord) {
         self.redo.clear();
@@ -123,6 +144,8 @@ mod imp {
     #[properties(wrapper_type = super::UndoManager)]
     pub struct UndoManager {
         pub(super) stack: RefCell<UndoStack>,
+        /// Where the history is saved; unset in tests.
+        pub(super) file: OnceCell<Arc<StateFile>>,
         #[property(get)]
         pub(super) can_undo: Cell<bool>,
         #[property(get)]
@@ -149,16 +172,32 @@ thread_local! {
     static MANAGER: OnceCell<UndoManager> = const { OnceCell::new() };
 }
 
-/// The application's undo manager.
+/// The application's undo manager, with the history saved last time.
 pub fn undo_manager() -> UndoManager {
-    MANAGER.with(|cell| cell.get_or_init(glib::Object::new).clone())
+    MANAGER.with(|cell| {
+        cell.get_or_init(|| {
+            let manager: UndoManager = glib::Object::new();
+            let file = StateFile::new(glib::user_state_dir().join("lia-files").join("undo.json"));
+            if let Some(json) = file.read() {
+                let stack = UndoStack::parse(&json);
+                manager.with(|saved| *saved = stack);
+            }
+            let _ = manager.imp().file.set(file);
+            manager
+        })
+        .clone()
+    })
 }
 
 impl UndoManager {
-    /// Runs `f` on the stacks, then updates the properties.
+    /// Runs `f` on the stacks, then updates the properties and saves the
+    /// history.
     pub fn with<R>(&self, f: impl FnOnce(&mut UndoStack) -> R) -> R {
         let imp = self.imp();
         let result = f(&mut imp.stack.borrow_mut());
+        if let Some(file) = imp.file.get() {
+            file.save(imp.stack.borrow().to_json());
+        }
         let (can_undo, can_redo) = {
             let stack = imp.stack.borrow();
             (stack.can_undo(), stack.can_redo())
@@ -170,6 +209,15 @@ impl UndoManager {
             self.notify_can_redo();
         }
         result
+    }
+
+    /// Writes the history now (when the app quits: saves in progress on
+    /// worker threads would be cut short).
+    pub fn flush(&self) {
+        let imp = self.imp();
+        if let Some(file) = imp.file.get() {
+            file.save_now(&imp.stack.borrow().to_json());
+        }
     }
 
     pub fn undo_label(&self) -> Option<String> {

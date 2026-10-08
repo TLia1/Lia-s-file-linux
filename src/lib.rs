@@ -9,8 +9,24 @@ pub mod util;
 pub mod widgets;
 pub mod window;
 
+use std::sync::OnceLock;
+use std::time::Instant;
+
 use gettextrs::LocaleCategory;
 use gtk::gio;
+
+static STARTED: OnceLock<Instant> = OnceLock::new();
+
+/// Records the start of the process, for the startup time logged at the
+/// first frame (`LIA_LOG=lia_files=debug`).
+pub fn mark_startup() {
+    STARTED.get_or_init(Instant::now);
+}
+
+/// Time since [`mark_startup`].
+pub fn since_startup() -> std::time::Duration {
+    STARTED.get_or_init(Instant::now).elapsed()
+}
 
 /// Registers the compiled GResource bundle (UI files, stylesheet).
 pub fn register_resources() {

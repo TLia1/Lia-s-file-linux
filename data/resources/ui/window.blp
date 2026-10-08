@@ -129,6 +129,11 @@ template $LiaWindow: Adw.ApplicationWindow {
           width-request: 240;
           search-delay: 120;
           placeholder-text: _("Search");
+
+          // The placeholder changes with the folder and isn't read out.
+          accessibility {
+            label: _("Search");
+          }
         }
       }
 

@@ -8,6 +8,7 @@ use crate::config;
 use crate::dialogs;
 use crate::model::view_settings;
 use crate::services::file_ops::queue;
+use crate::services::recovery;
 use crate::services::undo::undo_manager;
 use crate::util::settings;
 use crate::window::Window;
@@ -37,6 +38,7 @@ mod imp {
             let app = self.obj();
             fix_font_rendering();
             follow_color_scheme();
+            recover_interrupted_operations();
             app.setup_actions();
             app.setup_accels();
         }
@@ -58,6 +60,7 @@ mod imp {
 
         fn shutdown(&self) {
             view_settings::flush();
+            undo_manager().flush();
             self.parent_shutdown();
         }
 
@@ -109,6 +112,12 @@ impl Application {
 
     fn present_window(&self, window: &Window) {
         window.present();
+        if self.windows().len() == 1 {
+            window.add_tick_callback(|_, _| {
+                tracing::debug!("first frame {:?} after start", crate::since_startup());
+                glib::ControlFlow::Break
+            });
+        }
         if let Ok(path) = std::env::var("LIA_SCREENSHOT") {
             self.screenshot_and_quit(window, path);
         }
@@ -295,6 +304,16 @@ impl Application {
             .comments(gettext("A clean, modern file manager"))
             .build();
         dialog.present(self.active_window().as_ref());
+    }
+}
+
+/// Cleans up what operations interrupted by a crash left behind.
+fn recover_interrupted_operations() {
+    let spawned = std::thread::Builder::new()
+        .name("lia-recovery".into())
+        .spawn(|| recovery::recover(&recovery::recovery_dir()));
+    if let Err(err) = spawned {
+        tracing::warn!("cannot start the recovery thread: {err}");
     }
 }
 

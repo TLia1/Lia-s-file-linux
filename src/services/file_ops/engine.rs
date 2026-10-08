@@ -16,6 +16,9 @@
 //! - Nothing is overwritten without the user choosing "Replace".
 //! - Archives are extracted into a hidden folder first, and created under
 //!   a `.part` name (see [`archive`]).
+//! - Temporary items are noted in the job's recovery log before they're
+//!   created, so that they can be cleaned up after a crash (see
+//!   [`crate::services::recovery`]).
 
 mod archive;
 mod batch_rename;
@@ -55,6 +58,8 @@ pub fn run(operation: &Operation, control: &Control, ui: &dyn Interaction) -> Ou
         errors: Vec::new(),
         skipped: 0,
         succeeded: 0,
+        portable_dirs: HashMap::new(),
+        portable: false,
     };
     let result = runner.dispatch(operation);
     let status = if result.is_err() || control.is_cancelled() {
@@ -63,6 +68,7 @@ pub fn run(operation: &Operation, control: &Control, ui: &dyn Interaction) -> Ou
         Status::Done
     };
     let undo = runner.undo_record(operation);
+    control.close_recovery_log();
     control.update(|p| {
         p.scanning = false;
         p.current.clear();
@@ -180,6 +186,10 @@ struct Runner<'a> {
     errors: Vec<String>,
     skipped: u32,
     succeeded: u32,
+    /// Folder URI → whether its file system needs portable names.
+    portable_dirs: HashMap<String, bool>,
+    /// The tree being transferred goes to such a file system.
+    portable: bool,
 }
 
 impl Runner<'_> {
@@ -449,6 +459,37 @@ impl Runner<'_> {
 
     /// Creates the parent folders of `target` if needed (undoing a move
     /// whose source folder has since been removed).
+    /// Whether `target`'s folder is on a FAT, exFAT or NTFS drive.
+    fn needs_portable_names(&mut self, target: &gio::File) -> bool {
+        let Some(parent) = target.parent() else {
+            return false;
+        };
+        let uri = parent.uri().to_string();
+        if let Some(&portable) = self.portable_dirs.get(&uri) {
+            return portable;
+        }
+        let portable = parent
+            .query_filesystem_info(gio::FILE_ATTRIBUTE_FILESYSTEM_TYPE, self.cancellable())
+            .ok()
+            .and_then(|info| info.attribute_string(gio::FILE_ATTRIBUTE_FILESYSTEM_TYPE))
+            .is_some_and(|fs| naming::needs_portable_names(&fs));
+        self.portable_dirs.insert(uri, portable);
+        portable
+    }
+
+    /// `name` in `dir`, changed if `portable` and the drive can't store it
+    /// (see [`naming::portable_name`]) — copying "a:b.txt" to a USB stick
+    /// gives "a_b.txt" rather than failing.
+    fn storable_child(&self, dir: &gio::File, name: &std::path::Path, portable: bool) -> gio::File {
+        match portable
+            .then(|| naming::portable_name(name.as_os_str()))
+            .flatten()
+        {
+            Some(storable) => dir.child(storable),
+            None => dir.child(name),
+        }
+    }
+
     fn ensure_parent(&self, target: &gio::File) {
         if let Some(parent) = target.parent()
             && !self.exists(&parent)
@@ -616,6 +657,10 @@ impl Runner<'_> {
                 continue;
             }
             self.ensure_parent(&target);
+            let portable = self.needs_portable_names(&target);
+            if portable && let (Some(parent), Some(name)) = (target.parent(), target.basename()) {
+                target = self.storable_child(&parent, &name, true);
+            }
             let resolved = self.resolve(source, source_is_dir, &target, MergePolicy::Ask)?;
             if let (Mode::Move, Target::Write { file, overwrite }) = (mode, &resolved) {
                 match self.try_rename(source, file, *overwrite)? {
@@ -633,7 +678,7 @@ impl Runner<'_> {
                 }
             }
             if !matches!(resolved, Target::Skip) {
-                pending.push((source.clone(), resolved));
+                pending.push((source.clone(), resolved, portable));
             }
         }
         if pending.is_empty() {
@@ -642,14 +687,15 @@ impl Runner<'_> {
 
         self.control.update(|p| p.scanning = true);
         let mut nodes = Vec::new();
-        for (source, target) in pending {
+        for (source, target, portable) in pending {
             if let Some(node) = self.scan(&source)? {
-                nodes.push((node, target));
+                nodes.push((node, target, portable));
             }
         }
         self.control.update(|p| p.scanning = false);
 
-        for (node, target) in nodes {
+        for (node, target, portable) in nodes {
+            self.portable = portable;
             // A merge may be on the same device: try renaming its children.
             let try_rename = mode == Mode::Move && matches!(target, Target::Merge(_));
             if self.transfer(&node, target, mode, true, try_rename)? {
@@ -750,10 +796,11 @@ impl Runner<'_> {
             }
             let mut complete = !node.incomplete;
             for child in &node.children {
+                let child_file = self.storable_child(&file, &child.name, self.portable);
                 let child_target = self.resolve(
                     &child.file,
                     child.is_dir(),
-                    &file.child(&child.name),
+                    &child_file,
                     MergePolicy::Silent,
                 )?;
                 complete &=
@@ -816,6 +863,9 @@ impl Runner<'_> {
 
         let copied = self.attempt(&node.file, || {
             control.update(|p| p.bytes_done = base);
+            if let Some(part) = &part {
+                control.note_temporary(part);
+            }
             let destination = part.as_ref().unwrap_or(target);
             let mut flags =
                 gio::FileCopyFlags::NOFOLLOW_SYMLINKS | gio::FileCopyFlags::ALL_METADATA;

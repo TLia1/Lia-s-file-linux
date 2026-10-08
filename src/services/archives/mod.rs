@@ -13,7 +13,8 @@ use gettextrs::gettext;
 use crate::services::file_ops::naming;
 
 /// Formats archives can be created in.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum ArchiveFormat {
     #[default]
     Zip,

@@ -230,6 +230,7 @@ impl DirectoryModel {
     }
 
     async fn enumerate(&self, location: &gio::File, generation: u64) -> Result<(), glib::Error> {
+        let started = std::time::Instant::now();
         let enumerator = location
             .enumerate_children_future(
                 ATTRIBUTES,
@@ -255,6 +256,9 @@ impl DirectoryModel {
                     .map(|info| FileItem::new(enumerator.child(&info), info)),
             );
             if last_publish.is_none_or(|t| t.elapsed() >= PUBLISH_INTERVAL) {
+                if last_publish.is_none() {
+                    tracing::debug!("first {} items in {:?}", buffer.len(), started.elapsed());
+                }
                 self.append(std::mem::take(&mut buffer));
                 last_publish = Some(std::time::Instant::now());
             }

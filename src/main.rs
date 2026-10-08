@@ -3,6 +3,7 @@ use gtk::prelude::*;
 use lia_files::application::Application;
 
 fn main() -> glib::ExitCode {
+    lia_files::mark_startup();
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_env("LIA_LOG")

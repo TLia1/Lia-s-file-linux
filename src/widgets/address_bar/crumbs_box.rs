@@ -1,7 +1,7 @@
 //! `CrumbsBox`: lays out breadcrumb segments in a row. When they don't fit,
 //! the leading segments are hidden and an overflow ("…") button is shown in
 //! their place; the current (last) segment is always visible and shrinks
-//! last.
+//! last. Right-to-left languages get the mirrored layout.
 
 use std::cell::{Cell, OnceCell, RefCell};
 
@@ -102,10 +102,17 @@ mod imp {
             }
             self.first_visible.set(first);
 
+            // Positions are computed left to right, then mirrored for
+            // right-to-left languages (the root on the right).
+            let rtl = self.obj().direction() == gtk::TextDirection::Rtl;
+            let place = |widget: &gtk::Widget, x: i32, w: i32| {
+                let x = if rtl { width - x - w } else { x };
+                widget.size_allocate(&gtk::Allocation::new(x, 0, w, height), -1);
+            };
             let mut x = 0;
             overflow.set_child_visible(first > 0);
             if first > 0 {
-                overflow.size_allocate(&gtk::Allocation::new(0, 0, overflow_width, height), -1);
+                place(overflow.upcast_ref(), 0, overflow_width);
                 x = overflow_width;
             }
             let last = segments.len().saturating_sub(1);
@@ -120,7 +127,7 @@ mod imp {
                     let minimum = segment.measure(gtk::Orientation::Horizontal, -1).0;
                     w = w.min(width - x).max(minimum);
                 }
-                segment.size_allocate(&gtk::Allocation::new(x, 0, w, height), -1);
+                place(segment, x, w);
                 x += w;
             }
         }

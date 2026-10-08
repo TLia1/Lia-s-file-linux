@@ -35,3 +35,10 @@ src/services/file_ops/engine/archive.rs
 src/services/file_ops/engine/batch_rename.rs
 src/services/file_ops/job.rs
 src/services/undo.rs
+data/resources/ui/conflict-dialog.blp
+src/dialogs/conflict.rs
+src/model/search_filters.rs
+src/services/file_ops/engine.rs
+src/services/file_ops/naming.rs
+src/widgets/address_bar/crumbs_box.rs
+src/widgets/operations_popover/mod.rs

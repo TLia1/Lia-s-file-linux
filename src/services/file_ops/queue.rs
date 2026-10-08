@@ -20,6 +20,7 @@ use super::engine;
 use super::job::{FileOpJob, JobState, Purpose};
 use super::operation::*;
 use crate::dialogs;
+use crate::services::recovery::{RecoveryLog, recovery_dir};
 use crate::services::undo::undo_manager;
 use crate::util::settings;
 
@@ -293,6 +294,7 @@ impl JobQueue {
         job.set_state(JobState::Running);
         let (sender, receiver) = async_channel::unbounded();
         let control = job.control();
+        control.set_recovery_log(RecoveryLog::new(&recovery_dir()));
         let operation = job.operation().clone();
         let spawned = std::thread::Builder::new()
             .name("lia-file-op".into())

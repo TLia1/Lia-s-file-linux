@@ -135,3 +135,44 @@ fn trash_records_a_restore() {
         Some(Operation::Trash { .. })
     ));
 }
+
+#[test]
+fn history_survives_a_restart() {
+    use std::os::unix::ffi::OsStrExt;
+    let odd = gio::File::for_path(std::ffi::OsStr::from_bytes(b"/tmp/odd \xff\nname"));
+    let dir = gio::File::for_path("/tmp/dir");
+    let mut stack = UndoStack::default();
+    stack.record(UndoRecord::new(
+        Operation::copy_into(std::slice::from_ref(&odd), &dir),
+        Operation::Trash {
+            files: vec![dir.child("odd")],
+        },
+    ));
+    stack.record(UndoRecord::new(
+        Operation::CreateFile {
+            parent: dir.clone(),
+            name: "new.txt".into(),
+            template: None,
+        },
+        Operation::EmptyTrash,
+    ));
+    stack.record(rename("c"));
+    let undone = stack.pop_undo().unwrap();
+    stack.push_undone(undone);
+
+    let mut saved = UndoStack::parse(&stack.to_json());
+    assert_eq!(saved.redo_label().as_deref(), Some("Rename"));
+    assert_eq!(saved.undo_label().as_deref(), Some("New File"));
+    saved.pop_undo();
+    let copy = saved.pop_undo().unwrap();
+    let Operation::Copy { pairs } = &copy.forward else {
+        panic!("not a copy: {copy:?}");
+    };
+    // Any file name, as bytes, comes back unchanged.
+    assert!(pairs[0].0.equal(&odd));
+    assert!(pairs[0].1.has_parent(Some(&dir)));
+    assert!(!saved.can_undo());
+
+    // A damaged file gives an empty history rather than an error.
+    assert!(!UndoStack::parse("{not json").can_undo());
+}

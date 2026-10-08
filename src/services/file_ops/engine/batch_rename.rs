@@ -157,6 +157,7 @@ impl Runner<'_> {
             .unwrap_or_default();
         let cancellable = self.control.cancellable().clone();
         let current = item.current.clone();
+        self.control.note_moved_aside(&temp, &item.original);
         match self.attempt(&current, || {
             current.set_display_name(&temp_name, Some(&cancellable))
         })? {

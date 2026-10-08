@@ -6,6 +6,7 @@ pub mod clipboard;
 pub mod disk_usage;
 pub mod file_ops;
 pub mod network;
+pub mod recovery;
 pub mod search;
 pub mod templates;
 pub mod terminal;

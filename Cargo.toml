@@ -16,6 +16,8 @@ path = "src/main.rs"
 [dependencies]
 gtk = { version = "0.11", package = "gtk4", features = ["v4_20"] }
 adw = { version = "0.9", package = "libadwaita", features = ["v1_8"] }
+# Only to enable features of the glib re-exported by gtk (user_state_dir).
+glib = { version = "0.22", features = ["v2_72"] }
 gettext-rs = { version = "0.8", features = ["gettext-system"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
@@ -29,6 +31,7 @@ glib-build-tools = "0.22"
 
 [dev-dependencies]
 tempfile = "3"
+libc = "0.2"
 
 [profile.release]
 lto = true

@@ -3,6 +3,24 @@
 use gettextrs::{gettext, ngettext};
 use gtk::glib;
 
+/// A file name made fit for a one-line label: control characters (a
+/// newline is allowed in names) are shown as their Unicode symbol ("␊"),
+/// so the row keeps its height and the name stays recognizable.
+pub fn one_line(name: &str) -> std::borrow::Cow<'_, str> {
+    if !name.chars().any(char::is_control) {
+        return name.into();
+    }
+    name.chars()
+        .map(|c| match c {
+            '\0'..='\x1f' => char::from_u32(0x2400 + c as u32).unwrap_or('\u{FFFD}'),
+            '\x7f' => '\u{2421}',
+            c if c.is_control() => '\u{FFFD}',
+            c => c,
+        })
+        .collect::<String>()
+        .into()
+}
+
 /// "1.2 MB", "640 kB", "12 bytes" (SI units, like the rest of GNOME).
 pub fn size(bytes: u64) -> String {
     glib::format_size(bytes).into()

@@ -1,0 +1,2427 @@
+# French translations for lia-files package
+# Traductions françaises du paquet lia-files.
+# Copyright (C) 2026 THE lia-files'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the lia-files package.
+# Automatically generated, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: lia-files\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-08 09:20+0200\n"
+"PO-Revision-Date: 2026-10-08 09:22+0200\n"
+"Last-Translator: Lia\n"
+"Language-Team: French\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: data/io.github.lia.Files.desktop.in:2
+#: data/io.github.lia.Files.metainfo.xml.in:6
+msgid "Lia Files"
+msgstr "Lia Files"
+
+#: data/io.github.lia.Files.desktop.in:3
+msgid "File Manager"
+msgstr "Gestionnaire de fichiers"
+
+#: data/io.github.lia.Files.desktop.in:4
+#: data/io.github.lia.Files.metainfo.xml.in:7
+msgid "Browse and organize your files"
+msgstr "Parcourir et organiser vos fichiers"
+
+#: data/io.github.lia.Files.desktop.in:10
+msgid "folder;manager;explore;disk;filesystem;"
+msgstr "folder;manager;explore;dossier;gestionnaire;explorateur;disque;fichiers;système de fichiers;"
+
+#: data/io.github.lia.Files.metainfo.xml.in:9
+msgid "A clean, modern file manager with a tidy command bar, breadcrumb address bar, tabs and a details pane."
+msgstr "Un gestionnaire de fichiers moderne et épuré, avec une barre de commandes ordonnée, une barre d’adresse en fil d’Ariane, des onglets et un volet de détails."
+
+#: data/io.github.lia.Files.gschema.xml:36
+msgid "Light or dark style"
+msgstr "Style clair ou sombre"
+
+#: data/io.github.lia.Files.gschema.xml:37
+msgid "“system” follows the desktop's preference."
+msgstr "« system » suit la préférence du bureau."
+
+#: data/io.github.lia.Files.gschema.xml:41
+msgid "Open items with a single click"
+msgstr "Ouvrir les éléments d’un simple clic"
+
+#: data/io.github.lia.Files.gschema.xml:45
+msgid "Ask before moving items to the Trash"
+msgstr "Demander avant de mettre des éléments à la corbeille"
+
+#: data/io.github.lia.Files.gschema.xml:51
+msgid "Window width"
+msgstr "Largeur de la fenêtre"
+
+#: data/io.github.lia.Files.gschema.xml:55
+msgid "Window height"
+msgstr "Hauteur de la fenêtre"
+
+#: data/io.github.lia.Files.gschema.xml:59
+msgid "Whether the window is maximized"
+msgstr "Si la fenêtre est maximisée"
+
+#: data/io.github.lia.Files.gschema.xml:64
+msgid "Width of the navigation pane"
+msgstr "Largeur du volet de navigation"
+
+#: data/io.github.lia.Files.gschema.xml:70
+msgid "Folder opened in new windows at startup"
+msgstr "Dossier ouvert dans les nouvelles fenêtres au démarrage"
+
+#: data/io.github.lia.Files.gschema.xml:71
+msgid "Used when the last session isn't restored."
+msgstr "Utilisé quand la dernière session n’est pas restaurée."
+
+#: data/io.github.lia.Files.gschema.xml:75
+msgid "Reopen the tabs of the last session on startup"
+msgstr "Rouvrir les onglets de la dernière session au démarrage"
+
+#: data/io.github.lia.Files.gschema.xml:79
+msgid "URIs of the tabs open when the last window was closed"
+msgstr "URI des onglets ouverts à la fermeture de la dernière fenêtre"
+
+#: data/io.github.lia.Files.gschema.xml:83
+msgid "Index of the selected tab in session-tabs"
+msgstr "Indice de l’onglet sélectionné dans session-tabs"
+
+#: data/io.github.lia.Files.gschema.xml:89
+msgid "Default view mode"
+msgstr "Mode d’affichage par défaut"
+
+#: data/io.github.lia.Files.gschema.xml:90
+msgid "Used for folders whose view hasn't been changed; changes made in a folder are remembered for it."
+msgstr "Utilisé pour les dossiers dont l’affichage n’a pas été modifié ; les changements faits dans un dossier sont mémorisés pour celui-ci."
+
+#: data/io.github.lia.Files.gschema.xml:95
+msgid "Icon size in grid view, in pixels"
+msgstr "Taille des icônes en grille, en pixels"
+
+#: data/io.github.lia.Files.gschema.xml:99 data/resources/ui/shortcuts.blp:78
+msgid "Show hidden files"
+msgstr "Afficher les fichiers cachés"
+
+#: data/io.github.lia.Files.gschema.xml:103
+msgid "List folders before files"
+msgstr "Lister les dossiers avant les fichiers"
+
+#: data/io.github.lia.Files.gschema.xml:109
+msgid "Which files get thumbnails"
+msgstr "Fichiers pour lesquels créer des miniatures"
+
+#: data/io.github.lia.Files.gschema.xml:110
+msgid "Thumbnails already in the shared cache are always used; this decides which files new thumbnails are made for."
+msgstr "Les miniatures déjà présentes dans le cache partagé sont toujours utilisées ; ce réglage décide pour quels fichiers de nouvelles miniatures sont créées."
+
+#: data/io.github.lia.Files.gschema.xml:114
+msgid "Largest file to make a thumbnail for, in megabytes"
+msgstr "Taille maximale d’un fichier pour créer sa miniature, en mégaoctets"
+
+#: data/io.github.lia.Files.gschema.xml:118
+msgid "Show the details pane"
+msgstr "Afficher le volet de détails"
+
+#: data/io.github.lia.Files.gschema.xml:123
+msgid "Width of the details pane"
+msgstr "Largeur du volet de détails"
+
+#: data/io.github.lia.Files.gschema.xml:130
+msgid "File operations run at the same time on one device"
+msgstr "Opérations sur les fichiers exécutées simultanément sur un même périphérique"
+
+#: data/io.github.lia.Files.gschema.xml:131
+msgid "Copies and moves to the same drive run one after another by default, which is fastest on most disks. Operations on different drives always run in parallel."
+msgstr "Par défaut, les copies et déplacements vers un même lecteur s’exécutent l’un après l’autre, ce qui est le plus rapide sur la plupart des disques. Les opérations sur des lecteurs différents s’exécutent toujours en parallèle."
+
+#: data/io.github.lia.Files.gschema.xml:136
+msgid "Format of new archives"
+msgstr "Format des nouvelles archives"
+
+#: data/io.github.lia.Files.gschema.xml:137
+msgid "The format last chosen in the Compress dialog."
+msgstr "Le dernier format choisi dans la boîte de dialogue Compresser."
+
+#: data/io.github.lia.Files.gschema.xml:143
+msgid "Servers recently connected to, most recent first"
+msgstr "Serveurs auxquels vous vous êtes connecté récemment, du plus récent au plus ancien"
+
+#: data/resources/ui/window.blp:9 data/resources/ui/shortcuts.blp:123
+msgid "Files"
+msgstr "Fichiers"
+
+#: data/resources/ui/window.blp:48
+msgid "New Tab (Ctrl+T)"
+msgstr "Nouvel onglet (Ctrl+T)"
+
+#: data/resources/ui/window.blp:60
+msgid "Navigation Pane (F9)"
+msgstr "Volet de navigation (F9)"
+
+#: data/resources/ui/window.blp:69
+msgid "Main Menu"
+msgstr "Menu principal"
+
+#: data/resources/ui/window.blp:85
+msgid "Back (Alt+Left)"
+msgstr "Précédent (Alt+Gauche)"
+
+#: data/resources/ui/window.blp:95
+msgid "Forward (Alt+Right)"
+msgstr "Suivant (Alt+Droite)"
+
+#: data/resources/ui/window.blp:105
+msgid "Up (Alt+Up)"
+msgstr "Dossier parent (Alt+Haut)"
+
+#: data/resources/ui/window.blp:115
+msgid "Refresh (F5)"
+msgstr "Actualiser (F5)"
+
+#: data/resources/ui/window.blp:131 data/resources/ui/shortcuts.blp:34
+msgid "Search"
+msgstr "Rechercher"
+
+#: data/resources/ui/window.blp:145
+msgid "Create a new item"
+msgstr "Créer un nouvel élément"
+
+#: data/resources/ui/window.blp:149
+msgid "New"
+msgstr "Nouveau"
+
+#: data/resources/ui/window.blp:160
+msgid "Restore the selected items"
+msgstr "Restaurer les éléments sélectionnés"
+
+#: data/resources/ui/window.blp:165 src/services/undo.rs:49
+msgid "Restore"
+msgstr "Restaurer"
+
+#: data/resources/ui/window.blp:176
+msgid "Permanently delete everything in the Trash"
+msgstr "Supprimer définitivement tout le contenu de la corbeille"
+
+#: data/resources/ui/window.blp:181
+msgid "Empty Trash"
+msgstr "Vider la corbeille"
+
+#: data/resources/ui/window.blp:196
+msgid "Cut (Ctrl+X)"
+msgstr "Couper (Ctrl+X)"
+
+#: data/resources/ui/window.blp:206
+msgid "Copy (Ctrl+C)"
+msgstr "Copier (Ctrl+C)"
+
+#: data/resources/ui/window.blp:216
+msgid "Paste (Ctrl+V)"
+msgstr "Coller (Ctrl+V)"
+
+#: data/resources/ui/window.blp:226
+msgid "Rename (F2)"
+msgstr "Renommer (F2)"
+
+#: data/resources/ui/window.blp:236
+msgid "Move to Trash (Delete)"
+msgstr "Mettre à la corbeille (Suppr)"
+
+#: data/resources/ui/window.blp:247
+msgid "Delete Permanently (Delete)"
+msgstr "Supprimer définitivement (Suppr)"
+
+#: data/resources/ui/window.blp:258
+msgid "Extract the selected archives here"
+msgstr "Extraire ici les archives sélectionnées"
+
+#: data/resources/ui/window.blp:263 src/services/undo.rs:51
+msgid "Extract"
+msgstr "Extraire"
+
+#: data/resources/ui/window.blp:279 data/resources/ui/window.blp:283
+msgid "Sort"
+msgstr "Trier"
+
+#: data/resources/ui/window.blp:294 data/resources/ui/window.blp:298
+#: data/resources/ui/shortcuts.blp:50 src/dialogs/preferences.rs:90
+msgid "View"
+msgstr "Affichage"
+
+#: data/resources/ui/window.blp:309
+msgid "More Options"
+msgstr "Plus d’options"
+
+#: data/resources/ui/window.blp:321
+msgid "Details Pane (Alt+Shift+P)"
+msgstr "Volet de détails (Alt+Maj+P)"
+
+#: data/resources/ui/window.blp:326 src/dialogs/preferences.rs:92
+msgid "Details"
+msgstr "Détails"
+
+#: data/resources/ui/window.blp:350 data/resources/ui/window.blp:378
+msgid "Drag to resize"
+msgstr "Faire glisser pour redimensionner"
+
+#: data/resources/ui/window.blp:428
+msgid "Details (Ctrl+1)"
+msgstr "Détails (Ctrl+1)"
+
+#: data/resources/ui/window.blp:439
+msgid "Grid (Ctrl+2)"
+msgstr "Grille (Ctrl+2)"
+
+#: data/resources/ui/window.blp:456
+msgid "_New Window"
+msgstr "_Nouvelle fenêtre"
+
+#: data/resources/ui/window.blp:461
+msgid "New _Tab"
+msgstr "Nouvel _onglet"
+
+#: data/resources/ui/window.blp:468
+msgid "Connect to _Server…"
+msgstr "Se connecter à un _serveur…"
+
+#: data/resources/ui/window.blp:475 data/resources/ui/window.blp:641
+#: src/widgets/file_view/mod.rs:1663
+msgid "Show _Hidden Files"
+msgstr "Afficher les fichiers _cachés"
+
+#: data/resources/ui/window.blp:480 src/widgets/file_view/mod.rs:1665
+msgid "Sort _Folders Before Files"
+msgstr "Trier les _dossiers avant les fichiers"
+
+#: data/resources/ui/window.blp:485
+msgid "_Reopen Tabs on Startup"
+msgstr "_Rouvrir les onglets au démarrage"
+
+#: data/resources/ui/window.blp:492
+msgid "_Preferences"
+msgstr "_Préférences"
+
+#: data/resources/ui/window.blp:497
+msgid "_Keyboard Shortcuts"
+msgstr "_Raccourcis clavier"
+
+#: data/resources/ui/window.blp:502
+msgid "_About Files"
+msgstr "À _propos de Fichiers"
+
+#: data/resources/ui/window.blp:511 src/widgets/file_view/mod.rs:1628
+msgid "_Folder"
+msgstr "_Dossier"
+
+#: data/resources/ui/window.blp:516 src/widgets/file_view/mod.rs:1629
+msgid "_Empty File"
+msgstr "Fichier _vide"
+
+#: data/resources/ui/window.blp:525 data/resources/ui/window.blp:580
+#: src/widgets/file_view/mod.rs:1684 src/widgets/file_view/mod.rs:1695
+msgid "_Name"
+msgstr "_Nom"
+
+#: data/resources/ui/window.blp:531 data/resources/ui/window.blp:586
+#: src/widgets/file_view/mod.rs:1685 src/widgets/file_view/mod.rs:1696
+msgid "_Date Modified"
+msgstr "Date de _modification"
+
+#: data/resources/ui/window.blp:537 data/resources/ui/window.blp:592
+#: src/widgets/file_view/mod.rs:1686 src/widgets/file_view/mod.rs:1697
+msgid "_Type"
+msgstr "_Type"
+
+#: data/resources/ui/window.blp:543 data/resources/ui/window.blp:598
+#: src/widgets/file_view/mod.rs:1687 src/widgets/file_view/mod.rs:1698
+msgid "_Size"
+msgstr "_Taille"
+
+#: data/resources/ui/window.blp:551 src/widgets/file_view/mod.rs:1704
+msgid "_Ascending"
+msgstr "_Croissant"
+
+#: data/resources/ui/window.blp:557 src/widgets/file_view/mod.rs:1705
+msgid "D_escending"
+msgstr "_Décroissant"
+
+#: data/resources/ui/window.blp:565
+msgid "_Folders First"
+msgstr "Dossiers en _premier"
+
+#: data/resources/ui/window.blp:570 src/widgets/file_view/mod.rs:1625
+msgid "_Group By"
+msgstr "_Grouper par"
+
+#: data/resources/ui/window.blp:574 src/widgets/file_view/mod.rs:1694
+msgid "_None"
+msgstr "_Aucun"
+
+#: data/resources/ui/window.blp:610 src/widgets/file_view/mod.rs:1617
+msgid "_Details"
+msgstr "_Détails"
+
+#: data/resources/ui/window.blp:616 src/widgets/file_view/mod.rs:1618
+msgid "_Grid"
+msgstr "_Grille"
+
+#: data/resources/ui/window.blp:624
+msgid "Zoom _In"
+msgstr "_Agrandir"
+
+#: data/resources/ui/window.blp:629
+msgid "Zoom _Out"
+msgstr "_Réduire"
+
+#: data/resources/ui/window.blp:634
+msgid "_Reset Zoom"
+msgstr "_Taille normale"
+
+#: data/resources/ui/window.blp:646
+msgid "_Navigation Pane"
+msgstr "Volet de _navigation"
+
+#: data/resources/ui/window.blp:651
+msgid "D_etails Pane"
+msgstr "Volet de _détails"
+
+#: data/resources/ui/window.blp:660 src/widgets/file_view/mod.rs:1655
+#: src/window/mod.rs:1280
+msgid "_Undo"
+msgstr "_Annuler"
+
+#: data/resources/ui/window.blp:665 src/widgets/file_view/mod.rs:1656
+msgid "_Redo"
+msgstr "_Rétablir"
+
+#: data/resources/ui/window.blp:672 src/widgets/file_view/mod.rs:1574
+msgid "D_uplicate"
+msgstr "D_upliquer"
+
+#: data/resources/ui/window.blp:677 src/widgets/file_view/mod.rs:1575
+msgid "Create _Link"
+msgstr "Créer un _lien"
+
+#: data/resources/ui/window.blp:682 src/widgets/file_view/mod.rs:1589
+#: src/widgets/file_view/mod.rs:1592
+msgid "Co_mpress…"
+msgstr "Co_mpresser…"
+
+#: data/resources/ui/window.blp:687
+msgid "E_xtract To…"
+msgstr "E_xtraire vers…"
+
+#: data/resources/ui/window.blp:694 src/widgets/file_view/mod.rs:1641
+#: src/widgets/file_view/mod.rs:1649
+msgid "Select _All"
+msgstr "_Tout sélectionner"
+
+#: data/resources/ui/window.blp:699
+msgid "_Invert Selection"
+msgstr "_Inverser la sélection"
+
+#: data/resources/ui/window.blp:706 data/resources/ui/sidebar.blp:25
+#: src/widgets/file_view/mod.rs:1566
+msgid "Open in New _Tab"
+msgstr "Ouvrir dans un nouvel _onglet"
+
+#: data/resources/ui/window.blp:711 src/widgets/file_view/mod.rs:1598
+msgid "_Pin to Sidebar"
+msgstr "É_pingler dans la barre latérale"
+
+#: data/resources/ui/window.blp:716 src/widgets/file_view/mod.rs:1599
+#: src/widgets/file_view/mod.rs:1674
+msgid "Copy _Path"
+msgstr "Copier le _chemin"
+
+#: data/resources/ui/window.blp:721 src/widgets/file_view/mod.rs:1600
+#: src/widgets/file_view/mod.rs:1675
+msgid "Open in Ter_minal"
+msgstr "Ouvrir dans un ter_minal"
+
+#: data/resources/ui/window.blp:728
+msgid "_Quick Look"
+msgstr "_Aperçu rapide"
+
+#: data/resources/ui/window.blp:733 data/resources/ui/sidebar.blp:65
+#: src/widgets/file_view/mod.rs:1557 src/widgets/file_view/mod.rs:1605
+#: src/widgets/file_view/mod.rs:1676
+msgid "P_roperties"
+msgstr "P_ropriétés"
+
+#: data/resources/ui/window.blp:742
+msgid "_Duplicate Tab"
+msgstr "_Dupliquer l’onglet"
+
+#: data/resources/ui/window.blp:747
+msgid "Move to New _Window"
+msgstr "Déplacer vers une nouvelle _fenêtre"
+
+#: data/resources/ui/window.blp:754
+msgid "Close _Other Tabs"
+msgstr "Fermer les _autres onglets"
+
+#: data/resources/ui/window.blp:759
+msgid "_Close Tab"
+msgstr "_Fermer l’onglet"
+
+#: data/resources/ui/folder-pane.blp:20
+msgid "Search this folder and all its subfolders (Enter)"
+msgstr "Rechercher dans ce dossier et tous ses sous-dossiers (Entrée)"
+
+#: data/resources/ui/folder-pane.blp:24
+msgid "Search in Subfolders"
+msgstr "Rechercher dans les sous-dossiers"
+
+#: data/resources/ui/folder-pane.blp:53
+msgid "Filter by kind"
+msgstr "Filtrer par type"
+
+#: data/resources/ui/folder-pane.blp:63
+msgid "Filter by date modified"
+msgstr "Filtrer par date de modification"
+
+#: data/resources/ui/folder-pane.blp:73
+msgid "Filter by size"
+msgstr "Filtrer par taille"
+
+#: data/resources/ui/folder-pane.blp:86
+msgid "Clear Filters"
+msgstr "Effacer les filtres"
+
+#: data/resources/ui/address-bar.blp:33
+msgid "Enter a location"
+msgstr "Saisissez un emplacement"
+
+#: data/resources/ui/address-bar.blp:39 src/widgets/details_pane/mod.rs:212
+#: src/widgets/details_pane/mod.rs:300 src/widgets/details_pane/mod.rs:361
+#: src/dialogs/properties.rs:253 src/dialogs/properties.rs:337
+msgid "Location"
+msgstr "Emplacement"
+
+#: data/resources/ui/shortcuts.blp:6
+msgid "Navigation"
+msgstr "Navigation"
+
+#: data/resources/ui/shortcuts.blp:9
+msgid "Back"
+msgstr "Précédent"
+
+#: data/resources/ui/shortcuts.blp:14
+msgid "Forward"
+msgstr "Suivant"
+
+#: data/resources/ui/shortcuts.blp:19
+msgid "Up"
+msgstr "Dossier parent"
+
+#: data/resources/ui/shortcuts.blp:24
+msgid "Home folder"
+msgstr "Dossier personnel"
+
+#: data/resources/ui/shortcuts.blp:29
+msgid "Edit location"
+msgstr "Modifier l’emplacement"
+
+#: data/resources/ui/shortcuts.blp:39
+msgid "Search in subfolders (in the search field)"
+msgstr "Rechercher dans les sous-dossiers (dans le champ de recherche)"
+
+#: data/resources/ui/shortcuts.blp:44
+msgid "Refresh"
+msgstr "Actualiser"
+
+#: data/resources/ui/shortcuts.blp:53
+msgid "Details view"
+msgstr "Affichage en détails"
+
+#: data/resources/ui/shortcuts.blp:58
+msgid "Grid view"
+msgstr "Affichage en grille"
+
+#: data/resources/ui/shortcuts.blp:63
+msgid "Zoom in"
+msgstr "Agrandir"
+
+#: data/resources/ui/shortcuts.blp:68
+msgid "Zoom out"
+msgstr "Réduire"
+
+#: data/resources/ui/shortcuts.blp:73
+msgid "Reset zoom"
+msgstr "Taille normale"
+
+#: data/resources/ui/shortcuts.blp:83
+msgid "Navigation pane"
+msgstr "Volet de navigation"
+
+#: data/resources/ui/shortcuts.blp:88
+msgid "Details pane"
+msgstr "Volet de détails"
+
+#: data/resources/ui/shortcuts.blp:94
+msgid "Tabs"
+msgstr "Onglets"
+
+#: data/resources/ui/shortcuts.blp:97
+msgid "New tab"
+msgstr "Nouvel onglet"
+
+#: data/resources/ui/shortcuts.blp:102
+msgid "Close tab"
+msgstr "Fermer l’onglet"
+
+#: data/resources/ui/shortcuts.blp:107
+msgid "Next tab"
+msgstr "Onglet suivant"
+
+#: data/resources/ui/shortcuts.blp:112
+msgid "Previous tab"
+msgstr "Onglet précédent"
+
+#: data/resources/ui/shortcuts.blp:117
+msgid "Open folder in new tab"
+msgstr "Ouvrir le dossier dans un nouvel onglet"
+
+#: data/resources/ui/shortcuts.blp:126 src/dialogs/properties.rs:454
+msgid "Open"
+msgstr "Ouvrir"
+
+#: data/resources/ui/shortcuts.blp:131
+msgid "Cut"
+msgstr "Couper"
+
+#: data/resources/ui/shortcuts.blp:136 src/services/undo.rs:44
+msgid "Copy"
+msgstr "Copier"
+
+#: data/resources/ui/shortcuts.blp:141
+msgid "Paste"
+msgstr "Coller"
+
+#: data/resources/ui/shortcuts.blp:146
+msgid "Rename (several items: batch rename)"
+msgstr "Renommer (plusieurs éléments : renommage par lot)"
+
+#: data/resources/ui/shortcuts.blp:151
+msgid "Quick Look"
+msgstr "Aperçu rapide"
+
+#: data/resources/ui/shortcuts.blp:156 src/services/undo.rs:47
+msgid "Duplicate"
+msgstr "Dupliquer"
+
+#: data/resources/ui/shortcuts.blp:161
+msgid "New folder"
+msgstr "Nouveau dossier"
+
+#: data/resources/ui/shortcuts.blp:166 src/services/undo.rs:48
+msgid "Move to Trash"
+msgstr "Mettre à la corbeille"
+
+#: data/resources/ui/shortcuts.blp:171
+msgid "Delete permanently"
+msgstr "Supprimer définitivement"
+
+#: data/resources/ui/shortcuts.blp:176
+msgid "Undo"
+msgstr "Annuler"
+
+#: data/resources/ui/shortcuts.blp:181
+msgid "Redo"
+msgstr "Rétablir"
+
+#: data/resources/ui/shortcuts.blp:186
+msgid "Copy path"
+msgstr "Copier le chemin"
+
+#: data/resources/ui/shortcuts.blp:191
+#: data/resources/ui/properties-dialog.blp:5
+msgid "Properties"
+msgstr "Propriétés"
+
+#: data/resources/ui/shortcuts.blp:196
+msgid "Select all"
+msgstr "Tout sélectionner"
+
+#: data/resources/ui/shortcuts.blp:201
+msgid "Invert selection"
+msgstr "Inverser la sélection"
+
+#: data/resources/ui/shortcuts.blp:207
+#: data/resources/ui/properties-dialog.blp:23 src/dialogs/preferences.rs:73
+msgid "General"
+msgstr "Général"
+
+#: data/resources/ui/shortcuts.blp:210
+msgid "New window"
+msgstr "Nouvelle fenêtre"
+
+#: data/resources/ui/shortcuts.blp:215
+msgid "Close window"
+msgstr "Fermer la fenêtre"
+
+#: data/resources/ui/shortcuts.blp:220
+msgid "Preferences"
+msgstr "Préférences"
+
+#: data/resources/ui/shortcuts.blp:225
+msgid "Keyboard shortcuts"
+msgstr "Raccourcis clavier"
+
+#: data/resources/ui/shortcuts.blp:230
+msgid "Quit"
+msgstr "Quitter"
+
+#: data/resources/ui/sidebar.blp:16
+msgid "Places"
+msgstr "Emplacements"
+
+#: data/resources/ui/sidebar.blp:33
+msgid "_Unpin"
+msgstr "_Désépingler"
+
+#: data/resources/ui/sidebar.blp:39 src/widgets/file_view/mod.rs:1640
+#: src/dialogs/file_ops.rs:197
+msgid "_Empty Trash"
+msgstr "_Vider la corbeille"
+
+#: data/resources/ui/sidebar.blp:45
+msgid "_Mount"
+msgstr "_Monter"
+
+#: data/resources/ui/sidebar.blp:51
+msgid "U_nmount"
+msgstr "_Démonter"
+
+#: data/resources/ui/sidebar.blp:57
+msgid "_Eject"
+msgstr "É_jecter"
+
+#: src/application.rs:298
+msgid "A clean, modern file manager"
+msgstr "Un gestionnaire de fichiers moderne et épuré"
+
+#: src/util/format.rs:31
+#, rust-format
+msgid "{} item"
+msgid_plural "{} items"
+msgstr[0] "{} élément"
+msgstr[1] "{} éléments"
+
+#. Translators: transfer speed, e.g. "5.2 MB/s"
+#: src/util/format.rs:37
+#, rust-format
+msgid "{}/s"
+msgstr "{}/s"
+
+#: src/util/format.rs:44
+#, rust-format
+msgid "{} second left"
+msgid_plural "{} seconds left"
+msgstr[0] "{} seconde restante"
+msgstr[1] "{} secondes restantes"
+
+#: src/util/format.rs:47
+#, rust-format
+msgid "{} minute left"
+msgid_plural "{} minutes left"
+msgstr[0] "{} minute restante"
+msgstr[1] "{} minutes restantes"
+
+#. Translators: "2 h 5 min left"
+#: src/util/format.rs:52
+#, rust-format
+msgid "{h} h {m} min left"
+msgstr "{h} h {m} min restantes"
+
+#. Translators: "Today 14:02"
+#: src/util/format.rs:83
+#, rust-format
+msgid "Today {}"
+msgstr "Aujourd’hui {}"
+
+#. Translators: "Yesterday 14:02"
+#: src/util/format.rs:85
+#, rust-format
+msgid "Yesterday {}"
+msgstr "Hier {}"
+
+#. Translators: a full date and time, in strftime format
+#: src/util/format.rs:113
+msgid "%-d %B %Y, %H:%M"
+msgstr "%-d %B %Y, %H:%M"
+
+#: src/widgets/address_bar/mod.rs:377 src/widgets/address_bar/mod.rs:378
+#: src/widgets/folder_pane/mod.rs:1830 src/widgets/sidebar/mod.rs:461
+#: src/dialogs/preferences.rs:64
+msgid "Home"
+msgstr "Dossier personnel"
+
+#: src/widgets/address_bar/mod.rs:409 src/widgets/folder_pane/mod.rs:1833
+#: src/widgets/sidebar/mod.rs:533
+msgid "Trash"
+msgstr "Corbeille"
+
+#: src/widgets/address_bar/mod.rs:410 src/widgets/folder_pane/mod.rs:1834
+#: src/widgets/sidebar/mod.rs:467 src/dialogs/preferences.rs:64
+msgid "Recent"
+msgstr "Récents"
+
+#: src/widgets/address_bar/mod.rs:411 src/widgets/folder_pane/mod.rs:1835
+#: src/widgets/sidebar/mod.rs:675
+msgid "This PC"
+msgstr "Ce PC"
+
+#: src/widgets/address_bar/mod.rs:412 src/widgets/sidebar/mod.rs:654
+msgid "Network"
+msgstr "Réseau"
+
+#: src/widgets/address_bar/mod.rs:419
+msgid "Computer"
+msgstr "Ordinateur"
+
+#: src/widgets/file_view/mod.rs:532
+msgid "Name"
+msgstr "Nom"
+
+#: src/widgets/file_view/mod.rs:541 src/widgets/details_pane/mod.rs:208
+#: src/widgets/details_pane/mod.rs:237 src/dialogs/properties.rs:229
+#: src/dialogs/quick_look.rs:44 src/dialogs/conflict.rs:168
+msgid "Folder"
+msgstr "Dossier"
+
+#: src/widgets/file_view/mod.rs:562 src/widgets/details_pane/mod.rs:289
+#: src/dialogs/properties.rs:247
+msgid "Original location"
+msgstr "Emplacement d’origine"
+
+#: src/widgets/file_view/mod.rs:582 src/widgets/details_pane/mod.rs:297
+msgid "Date deleted"
+msgstr "Date de suppression"
+
+#: src/widgets/file_view/mod.rs:594
+msgid "Date modified"
+msgstr "Date de modification"
+
+#: src/widgets/file_view/mod.rs:602 src/dialogs/properties.rs:239
+msgid "Type"
+msgstr "Type"
+
+#: src/widgets/file_view/mod.rs:610 src/widgets/details_pane/mod.rs:255
+#: src/widgets/details_pane/mod.rs:351 src/dialogs/properties.rs:267
+#: src/dialogs/properties.rs:278 src/model/search_filters.rs:239
+msgid "Size"
+msgstr "Taille"
+
+#: src/widgets/file_view/mod.rs:1547
+msgid "_Restore"
+msgstr "_Restaurer"
+
+#: src/widgets/file_view/mod.rs:1548 src/dialogs/file_ops.rs:73
+msgid "_Delete Permanently"
+msgstr "_Supprimer définitivement"
+
+#: src/widgets/file_view/mod.rs:1553 src/widgets/file_view/mod.rs:1572
+msgid "Cu_t"
+msgstr "Cou_per"
+
+#: src/widgets/file_view/mod.rs:1553 src/widgets/file_view/mod.rs:1573
+msgid "_Copy"
+msgstr "_Copier"
+
+#: src/widgets/file_view/mod.rs:1564 src/dialogs/open_with.rs:70
+#: src/dialogs/quick_look.rs:152
+msgid "_Open"
+msgstr "_Ouvrir"
+
+#: src/widgets/file_view/mod.rs:1565
+msgid "Open _With…"
+msgstr "Ouvrir _avec…"
+
+#: src/widgets/file_view/mod.rs:1581
+msgid "_Rename…"
+msgstr "_Renommer…"
+
+#: src/widgets/file_view/mod.rs:1582
+msgid "Move to _Trash"
+msgstr "Mettre à la _corbeille"
+
+#: src/widgets/file_view/mod.rs:1587
+msgid "E_xtract Here"
+msgstr "E_xtraire ici"
+
+#: src/widgets/file_view/mod.rs:1588
+msgid "Extract _To…"
+msgstr "Extraire _vers…"
+
+#: src/widgets/file_view/mod.rs:1615
+msgid "_View"
+msgstr "_Affichage"
+
+#: src/widgets/file_view/mod.rs:1624
+msgid "_Sort By"
+msgstr "_Trier par"
+
+#: src/widgets/file_view/mod.rs:1632
+msgid "_New"
+msgstr "_Nouveau"
+
+#: src/widgets/file_view/mod.rs:1648
+msgid "_Paste"
+msgstr "C_oller"
+
+#: src/widgets/file_view/mod.rs:1673
+msgid "_Refresh"
+msgstr "Actuali_ser"
+
+#: src/widgets/folder_pane/mod.rs:647
+#, rust-format
+msgid "Search Results in {}"
+msgstr "Résultats de recherche dans {}"
+
+#: src/widgets/folder_pane/mod.rs:830
+#, rust-format
+msgid "Could not open “{}”"
+msgstr "Impossible d’ouvrir « {} »"
+
+#: src/widgets/folder_pane/mod.rs:881
+msgid "Path copied"
+msgstr "Chemin copié"
+
+#: src/widgets/folder_pane/mod.rs:883
+msgid "Paths copied"
+msgstr "Chemins copiés"
+
+#: src/widgets/folder_pane/mod.rs:1033
+#: src/services/file_ops/engine/batch_rename.rs:109
+#, rust-format
+msgid "An item named “{}” already exists"
+msgstr "Un élément nommé « {} » existe déjà"
+
+#: src/widgets/folder_pane/mod.rs:1430
+#, rust-format
+msgid "Search stopped after {} results"
+msgstr "Recherche arrêtée après {} résultats"
+
+#: src/widgets/folder_pane/mod.rs:1613
+msgid "Searching subfolders…"
+msgstr "Recherche dans les sous-dossiers…"
+
+#: src/widgets/folder_pane/mod.rs:1615
+msgid "Including subfolders"
+msgstr "Sous-dossiers inclus"
+
+#: src/widgets/folder_pane/mod.rs:1631
+msgid "Kind"
+msgstr "Type"
+
+#: src/widgets/folder_pane/mod.rs:1640
+msgid "Date Modified"
+msgstr "Date de modification"
+
+#: src/widgets/folder_pane/mod.rs:1671 src/widgets/folder_pane/mod.rs:1711
+msgid "No Results Found"
+msgstr "Aucun résultat"
+
+#: src/widgets/folder_pane/mod.rs:1673
+msgid "Nothing in this folder or its subfolders matches"
+msgstr "Rien ne correspond dans ce dossier ni dans ses sous-dossiers"
+
+#: src/widgets/folder_pane/mod.rs:1681
+msgid "Trash Unavailable"
+msgstr "Corbeille indisponible"
+
+#: src/widgets/folder_pane/mod.rs:1683
+msgid "Access Denied"
+msgstr "Accès refusé"
+
+#: src/widgets/folder_pane/mod.rs:1685
+msgid "Folder Not Found"
+msgstr "Dossier introuvable"
+
+#: src/widgets/folder_pane/mod.rs:1687
+msgid "Not a Folder"
+msgstr "Ce n’est pas un dossier"
+
+#: src/widgets/folder_pane/mod.rs:1689
+msgid "Unable to Open Folder"
+msgstr "Impossible d’ouvrir le dossier"
+
+#: src/widgets/folder_pane/mod.rs:1695
+msgid "Browsing the Trash needs GVfs: install the “gvfs” package. Moving files to the Trash and undoing it work without it."
+msgstr "Parcourir la corbeille nécessite GVfs : installez le paquet « gvfs ». Mettre des fichiers à la corbeille et l’annuler fonctionnent sans lui."
+
+#: src/widgets/folder_pane/mod.rs:1712
+msgid "Press Enter to search in subfolders too"
+msgstr "Appuyez sur Entrée pour chercher aussi dans les sous-dossiers"
+
+#: src/widgets/folder_pane/mod.rs:1716
+msgid "Folder Is Empty"
+msgstr "Le dossier est vide"
+
+#: src/widgets/folder_pane/mod.rs:1720
+msgid "Hidden files are not shown. Press Ctrl+H to show them."
+msgstr "Les fichiers cachés ne sont pas affichés. Appuyez sur Ctrl+H pour les afficher."
+
+#: src/widgets/folder_pane/mod.rs:1753
+#, rust-format
+msgid "{} selected"
+msgid_plural "{} selected"
+msgstr[0] "{} sélectionné"
+msgstr[1] "{} sélectionnés"
+
+#: src/widgets/folder_pane/mod.rs:1807
+#, rust-format
+msgid "{} free"
+msgstr "{} libres"
+
+#: src/widgets/sidebar/mod.rs:502 src/widgets/this_pc.rs:276
+msgid "File System"
+msgstr "Système de fichiers"
+
+#: src/widgets/sidebar/mod.rs:522
+msgid "Connect to Server…"
+msgstr "Se connecter à un serveur…"
+
+#: src/widgets/sidebar/mod.rs:621 src/widgets/this_pc.rs:323
+msgid "Eject"
+msgstr "Éjecter"
+
+#: src/widgets/sidebar/mod.rs:623 src/widgets/this_pc.rs:325
+msgid "Unmount"
+msgstr "Démonter"
+
+#: src/widgets/sidebar/mod.rs:649
+msgid "Pinned"
+msgstr "Épinglés"
+
+#: src/widgets/sidebar/mod.rs:680
+msgid "Show All Drives"
+msgstr "Afficher tous les lecteurs"
+
+#: src/widgets/sidebar/mod.rs:921 src/widgets/this_pc.rs:384
+#, rust-format
+msgid "Unable to access “{}”"
+msgstr "Impossible d’accéder à « {} »"
+
+#: src/window/mod.rs:428
+#, rust-format
+msgid "Search {}"
+msgstr "Rechercher dans {}"
+
+#: src/window/mod.rs:567
+#, rust-format
+msgid "Could not open a terminal: {}"
+msgstr "Impossible d’ouvrir un terminal : {}"
+
+#. Translators: name of a new symbolic link
+#: src/window/mod.rs:814
+#, rust-format
+msgid "Link to {}"
+msgstr "Lien vers {}"
+
+#: src/window/mod.rs:822 src/services/undo.rs:53
+msgid "New Folder"
+msgstr "Nouveau dossier"
+
+#: src/window/mod.rs:828 src/services/undo.rs:54
+msgid "New File"
+msgstr "Nouveau fichier"
+
+#: src/window/mod.rs:1286
+#, rust-format
+msgid "Failed: {}"
+msgstr "Échec : {}"
+
+#: src/widgets/details_pane/mod.rs:210 src/widgets/details_pane/mod.rs:246
+#: src/dialogs/properties.rs:365
+msgid "Contents"
+msgstr "Contenu"
+
+#: src/widgets/details_pane/mod.rs:213 src/widgets/details_pane/mod.rs:280
+#: src/dialogs/properties.rs:290
+msgid "Modified"
+msgstr "Modifié"
+
+#: src/widgets/details_pane/mod.rs:263
+msgid "Dimensions"
+msgstr "Dimensions"
+
+#. Translators: image dimensions, e.g. "1920 × 1080 pixels"
+#: src/widgets/details_pane/mod.rs:271
+#, rust-format
+msgid "{w} × {h} pixels"
+msgstr "{w} × {h} pixels"
+
+#: src/widgets/details_pane/mod.rs:283 src/dialogs/properties.rs:292
+msgid "Created"
+msgstr "Créé"
+
+#: src/widgets/details_pane/mod.rs:303 src/dialogs/properties.rs:260
+msgid "Link target"
+msgstr "Cible du lien"
+
+#: src/widgets/details_pane/mod.rs:330
+#, rust-format
+msgid "{} item selected"
+msgid_plural "{} items selected"
+msgstr[0] "{} élément sélectionné"
+msgstr[1] "{} éléments sélectionnés"
+
+#: src/widgets/details_pane/mod.rs:334 src/dialogs/properties.rs:671
+#, rust-format
+msgid "{} folder"
+msgid_plural "{} folders"
+msgstr[0] "{} dossier"
+msgstr[1] "{} dossiers"
+
+#: src/widgets/details_pane/mod.rs:335 src/dialogs/properties.rs:673
+#, rust-format
+msgid "{} file"
+msgid_plural "{} files"
+msgstr[0] "{} fichier"
+msgstr[1] "{} fichiers"
+
+#. Translators: "2 folders, 5 files"
+#: src/widgets/details_pane/mod.rs:340 src/dialogs/properties.rs:678
+#, rust-format
+msgid "{folders}, {files}"
+msgstr "{folders}, {files}"
+
+#: src/widgets/details_pane/mod.rs:349
+msgid "Size of files"
+msgstr "Taille des fichiers"
+
+#: data/resources/ui/properties-dialog.blp:69
+msgid "Permissions"
+msgstr "Permissions"
+
+#: data/resources/ui/properties-dialog.blp:75
+msgid "Ownership"
+msgstr "Propriété"
+
+#: data/resources/ui/properties-dialog.blp:78 src/dialogs/properties.rs:436
+msgid "Owner"
+msgstr "Propriétaire"
+
+#: data/resources/ui/properties-dialog.blp:88 src/dialogs/properties.rs:437
+msgid "Group"
+msgstr "Groupe"
+
+#: data/resources/ui/properties-dialog.blp:99
+msgid "Access"
+msgstr "Accès"
+
+#: data/resources/ui/properties-dialog.blp:104
+msgid "Allow Executing as Program"
+msgstr "Autoriser l’exécution comme programme"
+
+#: data/resources/ui/properties-dialog.blp:105
+msgid "Lets scripts and programs run when opened"
+msgstr "Permet aux scripts et programmes de s’exécuter à l’ouverture"
+
+#: data/resources/ui/properties-dialog.blp:109
+msgid "Mode"
+msgstr "Mode"
+
+#: data/resources/ui/properties-dialog.blp:124 src/dialogs/open_with.rs:86
+msgid "Open With"
+msgstr "Ouvrir avec"
+
+#: data/resources/ui/properties-dialog.blp:131
+msgid "_Reset"
+msgstr "_Réinitialiser"
+
+#: data/resources/ui/properties-dialog.blp:133
+msgid "Forget the default app chosen for this type"
+msgstr "Oublier l’application par défaut choisie pour ce type"
+
+#: data/resources/ui/properties-dialog.blp:144
+msgid "_Set as Default"
+msgstr "_Définir par défaut"
+
+#: src/dialogs/connect_server.rs:16
+msgid "Server Address"
+msgstr "Adresse du serveur"
+
+#: src/dialogs/connect_server.rs:28
+msgid "For example smb://nas/share, sftp://user@host, dav://host/path or ftp://host"
+msgstr "Par exemple smb://nas/partage, sftp://utilisateur@hôte, dav://hôte/chemin ou ftp://hôte"
+
+#: src/dialogs/connect_server.rs:35
+msgid "Recent Servers"
+msgstr "Serveurs récents"
+
+#: src/dialogs/connect_server.rs:43
+msgid "C_onnect"
+msgstr "Se c_onnecter"
+
+#: src/dialogs/connect_server.rs:49 src/dialogs/open_with.rs:78
+#: src/dialogs/batch_rename.rs:249 src/dialogs/compress.rs:64
+#: src/dialogs/file_ops.rs:71 src/dialogs/file_ops.rs:88
+#: src/dialogs/file_ops.rs:153 src/dialogs/file_ops.rs:179
+#: src/dialogs/file_ops.rs:196 data/resources/ui/conflict-dialog.blp:10
+msgid "_Cancel"
+msgstr "_Annuler"
+
+#: src/dialogs/connect_server.rs:62
+msgid "Connect to Server"
+msgstr "Se connecter à un serveur"
+
+#: src/dialogs/connect_server.rs:111
+msgid "This kind of location isn't available. Network locations need GVfs and its backends (e.g. the “gvfs-smb” package)."
+msgstr "Ce type d’emplacement n’est pas disponible. Les emplacements réseau nécessitent GVfs et ses modules (par exemple le paquet « gvfs-smb »)."
+
+#: src/dialogs/connect_server.rs:166
+msgid "Remove From Recent Servers"
+msgstr "Retirer des serveurs récents"
+
+#: src/dialogs/open_with.rs:21
+#, rust-format
+msgid "Always use for “{}”"
+msgstr "Toujours utiliser pour « {} »"
+
+#: src/dialogs/open_with.rs:37
+#, rust-format
+msgid "Choose an app to open “{}”"
+msgstr "Choisir une application pour ouvrir « {} »"
+
+#: src/dialogs/open_with.rs:39
+#, rust-format
+msgid "Choose an app to open {} files"
+msgstr "Choisir une application pour ouvrir les fichiers {}"
+
+#: src/dialogs/open_with.rs:157
+#, rust-format
+msgid "Could not start “{}”"
+msgstr "Impossible de lancer « {} »"
+
+#: src/dialogs/properties.rs:206
+msgid "Not Available"
+msgstr "Non disponible"
+
+#: src/dialogs/properties.rs:208
+msgid "The item may have been moved or deleted"
+msgstr "L’élément a peut-être été déplacé ou supprimé"
+
+#: src/dialogs/properties.rs:226
+#, rust-format
+msgid "“{}” Properties"
+msgstr "Propriétés de « {} »"
+
+#: src/dialogs/properties.rs:268
+msgid "Free space"
+msgstr "Espace libre"
+
+#: src/dialogs/properties.rs:291
+msgid "Accessed"
+msgstr "Consulté"
+
+#: src/dialogs/properties.rs:302
+msgid "Deleted"
+msgstr "Supprimé"
+
+#: src/dialogs/properties.rs:323
+#, rust-format
+msgid "{} Item"
+msgid_plural "{} Items"
+msgstr[0] "{} élément"
+msgstr[1] "{} éléments"
+
+#: src/dialogs/properties.rs:325
+#, rust-format
+msgid "Properties of {}"
+msgstr "Propriétés de {}"
+
+#: src/dialogs/properties.rs:342
+msgid "Total size"
+msgstr "Taille totale"
+
+#: src/dialogs/properties.rs:364
+msgid "Counting…"
+msgstr "Calcul en cours…"
+
+#: src/dialogs/properties.rs:380
+msgid "Empty folder"
+msgstr "Dossier vide"
+
+#. Translators: appended when some folders couldn't be read
+#: src/dialogs/properties.rs:384
+#, rust-format
+msgid "{} (some items couldn't be read)"
+msgstr "{} (certains éléments n’ont pas pu être lus)"
+
+#: src/dialogs/properties.rs:413 src/dialogs/properties.rs:420
+msgid "Unknown"
+msgstr "Inconnu"
+
+#: src/dialogs/properties.rs:431
+msgid "Only the owner can change these permissions"
+msgstr "Seul le propriétaire peut modifier ces permissions"
+
+#: src/dialogs/properties.rs:438
+msgid "Others"
+msgstr "Autres"
+
+#: src/dialogs/properties.rs:444 src/dialogs/properties.rs:460
+msgid "Read"
+msgstr "Lecture"
+
+#: src/dialogs/properties.rs:445
+msgid "See the items in the folder"
+msgstr "Voir les éléments du dossier"
+
+#: src/dialogs/properties.rs:449 src/dialogs/properties.rs:461
+msgid "Write"
+msgstr "Écriture"
+
+#: src/dialogs/properties.rs:450
+msgid "Create, rename and delete items in the folder"
+msgstr "Créer, renommer et supprimer des éléments dans le dossier"
+
+#: src/dialogs/properties.rs:455
+msgid "Open the folder and use its items"
+msgstr "Ouvrir le dossier et utiliser ses éléments"
+
+#: src/dialogs/properties.rs:460
+msgid "Read the file"
+msgstr "Lire le fichier"
+
+#: src/dialogs/properties.rs:461
+msgid "Change the file"
+msgstr "Modifier le fichier"
+
+#: src/dialogs/properties.rs:464
+msgid "Execute"
+msgstr "Exécution"
+
+#: src/dialogs/properties.rs:465
+msgid "Run the file as a program"
+msgstr "Exécuter le fichier comme un programme"
+
+#: src/dialogs/properties.rs:557
+#, rust-format
+msgid "Couldn't change the permissions: {}"
+msgstr "Impossible de modifier les permissions : {}"
+
+#: src/dialogs/properties.rs:570
+msgid "Default App"
+msgstr "Application par défaut"
+
+#: src/dialogs/properties.rs:572
+#, rust-format
+msgid "The app that opens “{}” files"
+msgstr "L’application qui ouvre les fichiers « {} »"
+
+#: src/services/network.rs:25
+msgid "Enter a server address"
+msgstr "Saisissez l’adresse d’un serveur"
+
+#: src/services/network.rs:27
+msgid "Start the address with a protocol, e.g. “smb://” or “sftp://”"
+msgstr "Commencez l’adresse par un protocole, par exemple « smb:// » ou « sftp:// »"
+
+#: src/services/network.rs:30
+#, rust-format
+msgid "“{}://” isn't a supported protocol"
+msgstr "« {}:// » n’est pas un protocole pris en charge"
+
+#: src/services/network.rs:32
+msgid "Add a server name after the protocol"
+msgstr "Ajoutez un nom de serveur après le protocole"
+
+#: src/services/terminal.rs:140
+msgid "No terminal application was found"
+msgstr "Aucune application de terminal n’a été trouvée"
+
+#: src/services/volumes.rs:141
+msgid "The volume was mounted but can't be found"
+msgstr "Le volume a été monté mais est introuvable"
+
+#: src/services/volumes.rs:175 src/services/volumes.rs:188
+#, rust-format
+msgid "“{}” can be safely removed"
+msgstr "« {} » peut être retiré en toute sécurité"
+
+#: src/services/volumes.rs:243
+#, rust-format
+msgid "{free} free of {size}"
+msgstr "{free} libres sur {size}"
+
+#: src/widgets/app_chooser.rs:89
+msgid "Apps"
+msgstr "Applications"
+
+#: src/widgets/app_chooser.rs:151
+msgid "Show Other Apps"
+msgstr "Afficher d’autres applications"
+
+#: src/widgets/app_chooser.rs:220
+msgid "Default app"
+msgstr "Application par défaut"
+
+#: src/widgets/this_pc.rs:131
+msgid "Devices and Drives"
+msgstr "Périphériques et lecteurs"
+
+#: src/widgets/this_pc.rs:133
+msgid "Network Locations"
+msgstr "Emplacements réseau"
+
+#: src/widgets/this_pc.rs:342
+msgid "Not mounted — open to mount"
+msgstr "Non monté — ouvrir pour monter"
+
+#: src/dialogs/batch_rename.rs:98
+msgid "Pattern"
+msgstr "Modèle"
+
+#: src/dialogs/batch_rename.rs:99
+msgid "Find & Replace"
+msgstr "Rechercher et remplacer"
+
+#: src/dialogs/batch_rename.rs:100
+msgid "Change Case"
+msgstr "Changer la casse"
+
+#: src/dialogs/batch_rename.rs:107
+msgid "New Name"
+msgstr "Nouveau nom"
+
+#: src/dialogs/batch_rename.rs:111
+msgid "Start Numbering At"
+msgstr "Commencer la numérotation à"
+
+#: src/dialogs/batch_rename.rs:115
+#, rust-format
+msgid "{name} is the current name, {n} a number ({n:03} gives 001, 002…), {date} the date modified. The extension is kept."
+msgstr "{name} est le nom actuel, {n} un numéro ({n:03} donne 001, 002…), {date} la date de modification. L’extension est conservée."
+
+#: src/dialogs/batch_rename.rs:122
+msgid "Find"
+msgstr "Rechercher"
+
+#: src/dialogs/batch_rename.rs:124 data/resources/ui/conflict-dialog.blp:78
+msgid "Replace With"
+msgstr "Remplacer par"
+
+#: src/dialogs/batch_rename.rs:127
+msgid "Match Case"
+msgstr "Respecter la casse"
+
+#: src/dialogs/batch_rename.rs:131
+msgid "Replaces every occurrence in the names. The extension is kept."
+msgstr "Remplace chaque occurrence dans les noms. L’extension est conservée."
+
+#: src/dialogs/batch_rename.rs:140
+msgid "Change To"
+msgstr "Changer en"
+
+#: src/dialogs/batch_rename.rs:146
+msgid "The extension is kept."
+msgstr "L’extension est conservée."
+
+#: src/dialogs/batch_rename.rs:225
+#, rust-format
+msgid "And {} more item"
+msgid_plural "And {} more items"
+msgstr[0] "Et {} autre élément"
+msgstr[1] "Et {} autres éléments"
+
+#: src/dialogs/batch_rename.rs:240
+msgid "Preview"
+msgstr "Aperçu"
+
+#: src/dialogs/batch_rename.rs:251
+msgid "_Rename"
+msgstr "_Renommer"
+
+#: src/dialogs/batch_rename.rs:268
+#, rust-format
+msgid "Rename {} Item"
+msgid_plural "Rename {} Items"
+msgstr[0] "Renommer {} élément"
+msgstr[1] "Renommer {} éléments"
+
+#: src/dialogs/batch_rename.rs:323
+#, rust-format
+msgid "{} name can't be used"
+msgid_plural "{} names can't be used"
+msgstr[0] "{} nom ne peut pas être utilisé"
+msgstr[1] "{} noms ne peuvent pas être utilisés"
+
+#: src/dialogs/batch_rename.rs:329
+msgid "No names change"
+msgstr "Aucun nom ne change"
+
+#: src/dialogs/batch_rename.rs:331
+#, rust-format
+msgid "{} name changes"
+msgid_plural "{} names change"
+msgstr[0] "{} nom change"
+msgstr[1] "{} noms changent"
+
+#: src/dialogs/compress.rs:22
+msgid "Archive Name"
+msgstr "Nom de l’archive"
+
+#: src/dialogs/compress.rs:27
+msgid "Format"
+msgstr "Format"
+
+#: src/dialogs/compress.rs:58 src/services/undo.rs:52
+msgid "Compress"
+msgstr "Compresser"
+
+#: src/dialogs/compress.rs:65
+msgid "C_ompress"
+msgstr "C_ompresser"
+
+#: src/dialogs/compress.rs:91
+msgid "Enter a name for the archive"
+msgstr "Saisissez un nom pour l’archive"
+
+#: src/dialogs/compress.rs:164
+msgid "Extract To"
+msgstr "Extraire vers"
+
+#: src/dialogs/compress.rs:165
+msgid "_Extract Here"
+msgstr "_Extraire ici"
+
+#: src/dialogs/file_ops.rs:63
+#, rust-format
+msgid "“{}” Can't Be Moved to the Trash"
+msgstr "« {} » ne peut pas être mis à la corbeille"
+
+#: src/dialogs/file_ops.rs:68
+msgid "Delete it permanently instead? It can't be recovered."
+msgstr "Le supprimer définitivement à la place ? Il ne pourra pas être récupéré."
+
+#: src/dialogs/file_ops.rs:72 src/dialogs/file_ops.rs:88
+#: data/resources/ui/conflict-dialog.blp:11
+msgid "_Skip"
+msgstr "_Ignorer"
+
+#: src/dialogs/file_ops.rs:78
+msgid "_Do this for all items"
+msgstr "_Faire de même pour tous les éléments"
+
+#: src/dialogs/file_ops.rs:86
+msgid "_OK"
+msgstr "_Valider"
+
+#: src/dialogs/file_ops.rs:90
+msgid "Skip _All"
+msgstr "Ignorer _tout"
+
+#: src/dialogs/file_ops.rs:93
+msgid "_Retry"
+msgstr "_Réessayer"
+
+#: src/dialogs/file_ops.rs:120
+#, rust-format
+msgid "Couldn't Copy “{}”"
+msgstr "Impossible de copier « {} »"
+
+#: src/dialogs/file_ops.rs:121
+#, rust-format
+msgid "Couldn't Move “{}”"
+msgstr "Impossible de déplacer « {} »"
+
+#: src/dialogs/file_ops.rs:122
+#, rust-format
+msgid "Couldn't Create a Link to “{}”"
+msgstr "Impossible de créer un lien vers « {} »"
+
+#: src/dialogs/file_ops.rs:123
+#, rust-format
+msgid "Couldn't Move “{}” to the Trash"
+msgstr "Impossible de mettre « {} » à la corbeille"
+
+#: src/dialogs/file_ops.rs:124
+#, rust-format
+msgid "Couldn't Delete “{}”"
+msgstr "Impossible de supprimer « {} »"
+
+#: src/dialogs/file_ops.rs:125
+#, rust-format
+msgid "Couldn't Restore “{}”"
+msgstr "Impossible de restaurer « {} »"
+
+#: src/dialogs/file_ops.rs:126
+#, rust-format
+msgid "Couldn't Rename “{}”"
+msgstr "Impossible de renommer « {} »"
+
+#: src/dialogs/file_ops.rs:127
+#, rust-format
+msgid "Couldn't Extract “{}”"
+msgstr "Impossible d’extraire « {} »"
+
+#: src/dialogs/file_ops.rs:128
+#, rust-format
+msgid "Couldn't Compress “{}”"
+msgstr "Impossible de compresser « {} »"
+
+#: src/dialogs/file_ops.rs:129
+#, rust-format
+msgid "Couldn't Create “{}”"
+msgstr "Impossible de créer « {} »"
+
+#: src/dialogs/file_ops.rs:137
+#, rust-format
+msgid "Permanently Delete “{}”?"
+msgstr "Supprimer définitivement « {} » ?"
+
+#: src/dialogs/file_ops.rs:140
+#, rust-format
+msgid "Permanently Delete {} Item?"
+msgid_plural "Permanently Delete {} Items?"
+msgstr[0] "Supprimer définitivement {} élément ?"
+msgstr[1] "Supprimer définitivement {} éléments ?"
+
+#: src/dialogs/file_ops.rs:149
+msgid "This can't be undone. Deleted items can't be recovered."
+msgstr "Cette action est irréversible. Les éléments supprimés ne pourront pas être récupérés."
+
+#: src/dialogs/file_ops.rs:154
+msgid "_Delete"
+msgstr "_Supprimer"
+
+#: src/dialogs/file_ops.rs:165
+#, rust-format
+msgid "Move “{}” to the Trash?"
+msgstr "Mettre « {} » à la corbeille ?"
+
+#: src/dialogs/file_ops.rs:168
+#, rust-format
+msgid "Move {} Item to the Trash?"
+msgid_plural "Move {} Items to the Trash?"
+msgstr[0] "Mettre {} élément à la corbeille ?"
+msgstr[1] "Mettre {} éléments à la corbeille ?"
+
+#: src/dialogs/file_ops.rs:176
+msgid "Items in the Trash can be restored."
+msgstr "Les éléments de la corbeille peuvent être restaurés."
+
+#: src/dialogs/file_ops.rs:180
+msgid "_Move to Trash"
+msgstr "_Mettre à la corbeille"
+
+#: src/dialogs/file_ops.rs:190
+msgid "Empty the Trash?"
+msgstr "Vider la corbeille ?"
+
+#: src/dialogs/file_ops.rs:192
+msgid "All items in the Trash will be permanently deleted. This can't be undone."
+msgstr "Tous les éléments de la corbeille seront définitivement supprimés. Cette action est irréversible."
+
+#: src/dialogs/preferences.rs:20
+msgid "Appearance"
+msgstr "Apparence"
+
+#: src/dialogs/preferences.rs:25
+msgid "Style"
+msgstr "Style"
+
+#: src/dialogs/preferences.rs:28
+msgid "Follow System"
+msgstr "Suivre le système"
+
+#: src/dialogs/preferences.rs:29
+msgid "Light"
+msgstr "Clair"
+
+#: src/dialogs/preferences.rs:30
+msgid "Dark"
+msgstr "Sombre"
+
+#: src/dialogs/preferences.rs:35
+msgid "Behavior"
+msgstr "Comportement"
+
+#: src/dialogs/preferences.rs:40
+msgid "Open Items With a Single Click"
+msgstr "Ouvrir les éléments d’un simple clic"
+
+#: src/dialogs/preferences.rs:46
+msgid "Ask Before Moving to the Trash"
+msgstr "Demander avant de mettre à la corbeille"
+
+#: src/dialogs/preferences.rs:47
+msgid "Items in the Trash can always be restored"
+msgstr "Les éléments de la corbeille peuvent toujours être restaurés"
+
+#: src/dialogs/preferences.rs:51
+msgid "Startup"
+msgstr "Démarrage"
+
+#: src/dialogs/preferences.rs:56
+msgid "Reopen Tabs From Last Time"
+msgstr "Rouvrir les onglets de la dernière fois"
+
+#: src/dialogs/preferences.rs:62
+msgid "Otherwise Open"
+msgstr "Sinon, ouvrir"
+
+#: src/dialogs/preferences.rs:82
+msgid "Default View"
+msgstr "Affichage par défaut"
+
+#: src/dialogs/preferences.rs:84
+msgid "Changes made in a folder (view, sorting, grouping) are remembered for that folder"
+msgstr "Les changements faits dans un dossier (affichage, tri, regroupement) sont mémorisés pour ce dossier"
+
+#: src/dialogs/preferences.rs:92
+msgid "Grid"
+msgstr "Grille"
+
+#: src/dialogs/preferences.rs:98
+msgid "Sort Folders Before Files"
+msgstr "Trier les dossiers avant les fichiers"
+
+#: src/dialogs/preferences.rs:104
+msgid "Show Hidden Files"
+msgstr "Afficher les fichiers cachés"
+
+#: src/dialogs/preferences.rs:109
+msgid "Thumbnails"
+msgstr "Miniatures"
+
+#: src/dialogs/preferences.rs:114
+msgid "Show Thumbnails"
+msgstr "Afficher les miniatures"
+
+#: src/dialogs/preferences.rs:115
+msgid "Thumbnails already made are always used"
+msgstr "Les miniatures déjà créées sont toujours utilisées"
+
+#: src/dialogs/preferences.rs:117
+msgid "For All Files"
+msgstr "Pour tous les fichiers"
+
+#: src/dialogs/preferences.rs:118
+msgid "For Files on This Computer"
+msgstr "Pour les fichiers de cet ordinateur"
+
+#: src/dialogs/preferences.rs:119
+msgid "Never"
+msgstr "Jamais"
+
+#: src/dialogs/preferences.rs:123
+msgid "Largest File (MB)"
+msgstr "Taille maximale (Mo)"
+
+#: src/dialogs/preferences.rs:124
+msgid "Larger files get no thumbnail"
+msgstr "Les fichiers plus gros n’ont pas de miniature"
+
+#: src/dialogs/preferences.rs:136
+msgid "Views"
+msgstr "Affichage"
+
+#: src/dialogs/preferences.rs:144 src/widgets/operations_popover/mod.rs:231
+#: src/widgets/operations_popover/mod.rs:249
+msgid "File Operations"
+msgstr "Opérations sur les fichiers"
+
+#: src/dialogs/preferences.rs:147
+msgid "Operations at Once per Drive"
+msgstr "Opérations simultanées par lecteur"
+
+#: src/dialogs/preferences.rs:149
+msgid "One at a time is fastest on most disks. Different drives always work in parallel."
+msgstr "Une à la fois est le plus rapide sur la plupart des disques. Des lecteurs différents travaillent toujours en parallèle."
+
+#: src/dialogs/preferences.rs:238 src/model/search_filters.rs:242
+msgid "Small"
+msgstr "Petite"
+
+#: src/dialogs/preferences.rs:238 src/model/search_filters.rs:243
+msgid "Medium"
+msgstr "Moyenne"
+
+#: src/dialogs/preferences.rs:238 src/model/search_filters.rs:244
+msgid "Large"
+msgstr "Grande"
+
+#: src/dialogs/preferences.rs:240
+msgid "Grid Icon Size"
+msgstr "Taille des icônes en grille"
+
+#: src/dialogs/quick_look.rs:154
+msgid "Open (Enter)"
+msgstr "Ouvrir (Entrée)"
+
+#: src/dialogs/quick_look.rs:158
+msgid "Previous Item (Left)"
+msgstr "Élément précédent (Gauche)"
+
+#: src/dialogs/quick_look.rs:162
+msgid "Next Item (Right)"
+msgstr "Élément suivant (Droite)"
+
+#: src/model/grouping.rs:130 src/model/search_filters.rs:161
+msgid "Today"
+msgstr "Aujourd’hui"
+
+#: src/model/grouping.rs:131
+msgid "Yesterday"
+msgstr "Hier"
+
+#: src/model/grouping.rs:132
+msgid "Earlier this week"
+msgstr "Plus tôt cette semaine"
+
+#: src/model/grouping.rs:133
+msgid "Last week"
+msgstr "La semaine dernière"
+
+#: src/model/grouping.rs:134
+msgid "Earlier this month"
+msgstr "Plus tôt ce mois-ci"
+
+#: src/model/grouping.rs:135
+msgid "Last month"
+msgstr "Le mois dernier"
+
+#: src/model/grouping.rs:136
+msgid "Earlier this year"
+msgstr "Plus tôt cette année"
+
+#: src/model/grouping.rs:137
+msgid "A long time ago"
+msgstr "Il y a longtemps"
+
+#: src/model/grouping.rs:138
+msgid "Unknown date"
+msgstr "Date inconnue"
+
+#: src/model/grouping.rs:166 src/model/grouping.rs:247
+#: src/model/search_filters.rs:61
+msgid "Folders"
+msgstr "Dossiers"
+
+#: src/model/grouping.rs:167 src/model/search_filters.rs:240
+msgid "Empty"
+msgstr "Vide"
+
+#: src/model/grouping.rs:168
+msgid "Tiny (up to 16 kB)"
+msgstr "Minuscule (jusqu’à 16 ko)"
+
+#: src/model/grouping.rs:169
+msgid "Small (16 kB – 1 MB)"
+msgstr "Petit (16 ko – 1 Mo)"
+
+#: src/model/grouping.rs:170 src/model/search_filters.rs:230
+msgid "Medium (1 – 128 MB)"
+msgstr "Moyen (1 – 128 Mo)"
+
+#: src/model/grouping.rs:171 src/model/search_filters.rs:231
+msgid "Large (128 MB – 1 GB)"
+msgstr "Grand (128 Mo – 1 Go)"
+
+#: src/model/grouping.rs:172
+msgid "Huge (1 – 4 GB)"
+msgstr "Énorme (1 – 4 Go)"
+
+#: src/model/grouping.rs:173
+msgid "Gigantic (over 4 GB)"
+msgstr "Gigantesque (plus de 4 Go)"
+
+#: src/model/grouping.rs:197
+msgid "0 – 9"
+msgstr "0 – 9"
+
+#: src/model/grouping.rs:198
+msgid "A – H"
+msgstr "A – H"
+
+#: src/model/grouping.rs:199
+msgid "I – P"
+msgstr "I – P"
+
+#: src/model/grouping.rs:200
+msgid "Q – Z"
+msgstr "Q – Z"
+
+#: src/model/grouping.rs:201
+msgid "Other"
+msgstr "Autre"
+
+#: src/model/grouping.rs:251
+msgid "Unknown type"
+msgstr "Type inconnu"
+
+#: src/services/archives/mod.rs:57
+msgid ".zip — works everywhere"
+msgstr ".zip — fonctionne partout"
+
+#: src/services/archives/mod.rs:58
+msgid ".tar.gz — common on Linux"
+msgstr ".tar.gz — courant sous Linux"
+
+#: src/services/archives/mod.rs:59
+msgid ".tar.xz — smaller, slower"
+msgstr ".tar.xz — plus petit, plus lent"
+
+#: src/services/archives/mod.rs:60
+msgid ".7z — smallest"
+msgstr ".7z — le plus petit"
+
+#: src/services/archives/mod.rs:137
+msgid "Archive"
+msgstr "Archive"
+
+#: src/services/batch_rename.rs:29
+msgid "lowercase"
+msgstr "minuscules"
+
+#: src/services/batch_rename.rs:30
+msgid "UPPERCASE"
+msgstr "MAJUSCULES"
+
+#: src/services/batch_rename.rs:31
+msgid "Title Case"
+msgstr "Majuscule À Chaque Mot"
+
+#: src/services/batch_rename.rs:32
+msgid "Sentence case"
+msgstr "Majuscule en début de phrase"
+
+#: src/services/batch_rename.rs:210
+msgid "Another item would get the same name"
+msgstr "Un autre élément aurait le même nom"
+
+#: src/services/batch_rename.rs:211
+msgid "An item with this name already exists"
+msgstr "Un élément portant ce nom existe déjà"
+
+#: src/services/file_ops/engine/archive.rs:116
+msgid "Only archives on this computer or on mounted drives can be extracted"
+msgstr "Seules les archives de cet ordinateur ou de lecteurs montés peuvent être extraites"
+
+#: src/services/file_ops/engine/archive.rs:205
+msgid "The archive is protected with a password. Password-protected archives can't be extracted yet."
+msgstr "L’archive est protégée par un mot de passe. Les archives protégées par mot de passe ne peuvent pas encore être extraites."
+
+#: src/services/file_ops/engine/archive.rs:282
+msgid "The archive is empty"
+msgstr "L’archive est vide"
+
+#: src/services/file_ops/engine/archive.rs:307
+msgid "The extracted files couldn't be moved into place"
+msgstr "Les fichiers extraits n’ont pas pu être mis en place"
+
+#: src/services/file_ops/engine/archive.rs:329
+msgid "Only files on this computer or on mounted drives can be compressed"
+msgstr "Seuls les fichiers de cet ordinateur ou de lecteurs montés peuvent être compressés"
+
+#: src/services/file_ops/engine/archive.rs:354
+msgid "Archives can only be created on this computer or on mounted drives"
+msgstr "Les archives ne peuvent être créées que sur cet ordinateur ou sur des lecteurs montés"
+
+#: src/services/file_ops/job.rs:123 src/services/file_ops/job.rs:260
+msgid "Waiting…"
+msgstr "En attente…"
+
+#: src/services/file_ops/job.rs:264
+#, rust-format
+msgid "Preparing… {} item found"
+msgid_plural "Preparing… {} items found"
+msgstr[0] "Préparation… {} élément trouvé"
+msgstr[1] "Préparation… {} éléments trouvés"
+
+#: src/services/file_ops/job.rs:271
+#, rust-format
+msgid "{done} of {total}"
+msgstr "{done} sur {total}"
+
+#: src/services/file_ops/job.rs:275
+#, rust-format
+msgid "{done} of {total} items"
+msgstr "{done} éléments sur {total}"
+
+#. Translators: "Paused · 12 MB of 40 MB"
+#: src/services/file_ops/job.rs:281
+#, rust-format
+msgid "Paused · {}"
+msgstr "En pause · {}"
+
+#: src/services/file_ops/job.rs:312
+msgid "Cancelled"
+msgstr "Annulé"
+
+#: src/services/file_ops/job.rs:313
+msgid "Failed"
+msgstr "Échec"
+
+#: src/services/file_ops/job.rs:314
+msgid "Done"
+msgstr "Terminé"
+
+#: src/services/file_ops/job.rs:338
+#, rust-format
+msgid "Renamed {n} item"
+msgid_plural "Renamed {n} items"
+msgstr[0] "{n} élément renommé"
+msgstr[1] "{n} éléments renommés"
+
+#: src/services/file_ops/job.rs:342
+#, rust-format
+msgid "Extracted “{name}”"
+msgstr "« {name} » extrait"
+
+#: src/services/file_ops/job.rs:343
+#, rust-format
+msgid "Extracted {n} archive"
+msgid_plural "Extracted {n} archives"
+msgstr[0] "{n} archive extraite"
+msgstr[1] "{n} archives extraites"
+
+#: src/services/file_ops/job.rs:345
+#, rust-format
+msgid "Created “{name}”"
+msgstr "« {name} » créé"
+
+#: src/services/file_ops/job.rs:348
+#, rust-format
+msgid "Copied “{name}” to “{to}”"
+msgstr "« {name} » copié dans « {to} »"
+
+#: src/services/file_ops/job.rs:349
+#, rust-format
+msgid "Copied {n} item to “{to}”"
+msgid_plural "Copied {n} items to “{to}”"
+msgstr[0] "{n} élément copié dans « {to} »"
+msgstr[1] "{n} éléments copiés dans « {to} »"
+
+#: src/services/file_ops/job.rs:354
+#, rust-format
+msgid "Moved “{name}” to “{to}”"
+msgstr "« {name} » déplacé dans « {to} »"
+
+#: src/services/file_ops/job.rs:355
+#, rust-format
+msgid "Moved {n} item to “{to}”"
+msgid_plural "Moved {n} items to “{to}”"
+msgstr[0] "{n} élément déplacé dans « {to} »"
+msgstr[1] "{n} éléments déplacés dans « {to} »"
+
+#: src/services/file_ops/job.rs:360
+#, rust-format
+msgid "Created a link to “{name}”"
+msgstr "Lien vers « {name} » créé"
+
+#: src/services/file_ops/job.rs:361
+#, rust-format
+msgid "Created {n} link"
+msgid_plural "Created {n} links"
+msgstr[0] "{n} lien créé"
+msgstr[1] "{n} liens créés"
+
+#: src/services/file_ops/job.rs:365
+#, rust-format
+msgid "Duplicated “{name}”"
+msgstr "« {name} » dupliqué"
+
+#: src/services/file_ops/job.rs:366
+#, rust-format
+msgid "Duplicated {n} item"
+msgid_plural "Duplicated {n} items"
+msgstr[0] "{n} élément dupliqué"
+msgstr[1] "{n} éléments dupliqués"
+
+#: src/services/file_ops/job.rs:370
+#, rust-format
+msgid "Moved “{name}” to the Trash"
+msgstr "« {name} » mis à la corbeille"
+
+#: src/services/file_ops/job.rs:372
+#, rust-format
+msgid "Moved {n} item to the Trash"
+msgid_plural "Moved {n} items to the Trash"
+msgstr[0] "{n} élément mis à la corbeille"
+msgstr[1] "{n} éléments mis à la corbeille"
+
+#: src/services/file_ops/job.rs:379
+#, rust-format
+msgid "Deleted “{name}”"
+msgstr "« {name} » supprimé"
+
+#: src/services/file_ops/job.rs:380
+#, rust-format
+msgid "Deleted {n} item"
+msgid_plural "Deleted {n} items"
+msgstr[0] "{n} élément supprimé"
+msgstr[1] "{n} éléments supprimés"
+
+#: src/services/file_ops/job.rs:384
+#, rust-format
+msgid "Restored “{name}”"
+msgstr "« {name} » restauré"
+
+#: src/services/file_ops/job.rs:385
+#, rust-format
+msgid "Restored {n} item"
+msgid_plural "Restored {n} items"
+msgstr[0] "{n} élément restauré"
+msgstr[1] "{n} éléments restaurés"
+
+#: src/services/file_ops/job.rs:387
+msgid "Trash emptied"
+msgstr "Corbeille vidée"
+
+#: src/services/file_ops/job.rs:392
+#, rust-format
+msgid "{} skipped"
+msgid_plural "{} skipped"
+msgstr[0] "{} ignoré"
+msgstr[1] "{} ignorés"
+
+#: src/services/file_ops/job.rs:460
+#, rust-format
+msgid "Copying “{name}” to “{to}”"
+msgstr "Copie de « {name} » dans « {to} »"
+
+#: src/services/file_ops/job.rs:462
+#, rust-format
+msgid "Copying {n} item to “{to}”"
+msgid_plural "Copying {n} items to “{to}”"
+msgstr[0] "Copie de {n} élément dans « {to} »"
+msgstr[1] "Copie de {n} éléments dans « {to} »"
+
+#: src/services/file_ops/job.rs:469
+#, rust-format
+msgid "Moving “{name}” to “{to}”"
+msgstr "Déplacement de « {name} » dans « {to} »"
+
+#: src/services/file_ops/job.rs:470
+#, rust-format
+msgid "Moving {n} item to “{to}”"
+msgid_plural "Moving {n} items to “{to}”"
+msgstr[0] "Déplacement de {n} élément dans « {to} »"
+msgstr[1] "Déplacement de {n} éléments dans « {to} »"
+
+#: src/services/file_ops/job.rs:474
+#, rust-format
+msgid "Creating a link to “{name}”"
+msgstr "Création d’un lien vers « {name} »"
+
+#: src/services/file_ops/job.rs:475
+#, rust-format
+msgid "Creating {n} link"
+msgid_plural "Creating {n} links"
+msgstr[0] "Création de {n} lien"
+msgstr[1] "Création de {n} liens"
+
+#: src/services/file_ops/job.rs:478
+#, rust-format
+msgid "Duplicating “{name}”"
+msgstr "Duplication de « {name} »"
+
+#: src/services/file_ops/job.rs:479
+#, rust-format
+msgid "Duplicating {n} item"
+msgid_plural "Duplicating {n} items"
+msgstr[0] "Duplication de {n} élément"
+msgstr[1] "Duplication de {n} éléments"
+
+#: src/services/file_ops/job.rs:482
+#, rust-format
+msgid "Moving “{name}” to the Trash"
+msgstr "Mise à la corbeille de « {name} »"
+
+#: src/services/file_ops/job.rs:484
+#, rust-format
+msgid "Moving {n} item to the Trash"
+msgid_plural "Moving {n} items to the Trash"
+msgstr[0] "Mise à la corbeille de {n} élément"
+msgstr[1] "Mise à la corbeille de {n} éléments"
+
+#: src/services/file_ops/job.rs:490
+#, rust-format
+msgid "Deleting “{name}”"
+msgstr "Suppression de « {name} »"
+
+#: src/services/file_ops/job.rs:491
+#, rust-format
+msgid "Deleting {n} item"
+msgid_plural "Deleting {n} items"
+msgstr[0] "Suppression de {n} élément"
+msgstr[1] "Suppression de {n} éléments"
+
+#: src/services/file_ops/job.rs:494
+#, rust-format
+msgid "Restoring “{name}”"
+msgstr "Restauration de « {name} »"
+
+#: src/services/file_ops/job.rs:495
+#, rust-format
+msgid "Restoring {n} item"
+msgid_plural "Restoring {n} items"
+msgstr[0] "Restauration de {n} élément"
+msgstr[1] "Restauration de {n} éléments"
+
+#: src/services/file_ops/job.rs:497
+msgid "Emptying the Trash"
+msgstr "Vidage de la corbeille"
+
+#: src/services/file_ops/job.rs:498
+#, rust-format
+msgid "Renaming “{name}”"
+msgstr "Renommage de « {name} »"
+
+#: src/services/file_ops/job.rs:500
+#, rust-format
+msgid "Creating “{name}”"
+msgstr "Création de « {name} »"
+
+#: src/services/file_ops/job.rs:503
+#, rust-format
+msgid "Renaming {n} item"
+msgid_plural "Renaming {n} items"
+msgstr[0] "Renommage de {n} élément"
+msgstr[1] "Renommage de {n} éléments"
+
+#: src/services/file_ops/job.rs:506
+#, rust-format
+msgid "Extracting “{name}”"
+msgstr "Extraction de « {name} »"
+
+#: src/services/file_ops/job.rs:507
+#, rust-format
+msgid "Extracting {n} archive"
+msgid_plural "Extracting {n} archives"
+msgstr[0] "Extraction de {n} archive"
+msgstr[1] "Extraction de {n} archives"
+
+#: src/services/file_ops/job.rs:514
+#, rust-format
+msgid "Compressing “{name}” into “{archive}”"
+msgstr "Compression de « {name} » dans « {archive} »"
+
+#: src/services/file_ops/job.rs:516
+#, rust-format
+msgid "Compressing {n} item into “{archive}”"
+msgid_plural "Compressing {n} items into “{archive}”"
+msgstr[0] "Compression de {n} élément dans « {archive} »"
+msgstr[1] "Compression de {n} éléments dans « {archive} »"
+
+#: src/services/undo.rs:45
+msgid "Move"
+msgstr "Déplacer"
+
+#: src/services/undo.rs:46
+msgid "Create Link"
+msgstr "Créer un lien"
+
+#: src/services/undo.rs:50
+msgid "Rename"
+msgstr "Renommer"
+
+#: data/resources/ui/conflict-dialog.blp:12
+msgid "_Keep Both"
+msgstr "_Garder les deux"
+
+#: data/resources/ui/conflict-dialog.blp:13
+msgid "_Replace"
+msgstr "_Remplacer"
+
+#: data/resources/ui/conflict-dialog.blp:35
+msgid "Existing"
+msgstr "Existant"
+
+#: data/resources/ui/conflict-dialog.blp:113
+msgid "_Do this for all conflicts"
+msgstr "_Faire de même pour tous les conflits"
+
+#: src/dialogs/conflict.rs:84
+#, rust-format
+msgid "Merge Folder “{}”?"
+msgstr "Fusionner le dossier « {} » ?"
+
+#: src/dialogs/conflict.rs:86
+#, rust-format
+msgid "A folder with this name already exists in “{}”. Merging adds the new items to it, and asks before replacing any file."
+msgstr "Un dossier portant ce nom existe déjà dans « {} ». La fusion y ajoute les nouveaux éléments et demande avant de remplacer un fichier."
+
+#: src/dialogs/conflict.rs:93
+#, rust-format
+msgid "Replace “{}”?"
+msgstr "Remplacer « {} » ?"
+
+#: src/dialogs/conflict.rs:95
+#, rust-format
+msgid "A file with this name already exists in “{}”. Replacing it overwrites its contents."
+msgstr "Un fichier portant ce nom existe déjà dans « {} ». Le remplacer écrase son contenu."
+
+#: src/dialogs/conflict.rs:102
+#, rust-format
+msgid "“{}” Already Exists"
+msgstr "« {} » existe déjà"
+
+#: src/dialogs/conflict.rs:103
+#, rust-format
+msgid "An item with this name already exists in “{}”."
+msgstr "Un élément portant ce nom existe déjà dans « {} »."
+
+#: src/dialogs/conflict.rs:110
+msgid "_Merge"
+msgstr "_Fusionner"
+
+#: src/dialogs/conflict.rs:112
+msgid "Merge With"
+msgstr "Fusionner avec"
+
+#: src/dialogs/conflict.rs:116
+msgid "New Item"
+msgstr "Nouvel élément"
+
+#. Translators: appended to the more recent of two dates
+#: src/dialogs/conflict.rs:175
+#, rust-format
+msgid "{} · Newer"
+msgstr "{} · Plus récent"
+
+#: src/model/search_filters.rs:60
+msgid "Any Kind"
+msgstr "Tous les types"
+
+#: src/model/search_filters.rs:62
+msgid "Documents"
+msgstr "Documents"
+
+#: src/model/search_filters.rs:63
+msgid "Pictures"
+msgstr "Images"
+
+#: src/model/search_filters.rs:64
+msgid "Videos"
+msgstr "Vidéos"
+
+#: src/model/search_filters.rs:65
+msgid "Music"
+msgstr "Musique"
+
+#: src/model/search_filters.rs:66
+msgid "Archives"
+msgstr "Archives"
+
+#: src/model/search_filters.rs:160
+msgid "Any Date"
+msgstr "Toutes les dates"
+
+#: src/model/search_filters.rs:162
+msgid "Last 7 Days"
+msgstr "7 derniers jours"
+
+#: src/model/search_filters.rs:163
+msgid "Last 30 Days"
+msgstr "30 derniers jours"
+
+#: src/model/search_filters.rs:164
+msgid "Last Year"
+msgstr "Dernière année"
+
+#: src/model/search_filters.rs:226
+msgid "Any Size"
+msgstr "Toutes les tailles"
+
+#: src/model/search_filters.rs:227
+msgid "Empty (0 KB)"
+msgstr "Vide (0 ko)"
+
+#: src/model/search_filters.rs:228
+msgid "Tiny (under 16 KB)"
+msgstr "Minuscule (moins de 16 ko)"
+
+#: src/model/search_filters.rs:229
+msgid "Small (16 KB – 1 MB)"
+msgstr "Petit (16 ko – 1 Mo)"
+
+#: src/model/search_filters.rs:232
+msgid "Huge (over 1 GB)"
+msgstr "Énorme (plus de 1 Go)"
+
+#: src/model/search_filters.rs:241
+msgid "Tiny"
+msgstr "Minuscule"
+
+#: src/model/search_filters.rs:245
+msgid "Huge"
+msgstr "Énorme"
+
+#: src/services/file_ops/engine.rs:652
+msgid "A folder can't be copied or moved into itself"
+msgstr "Un dossier ne peut pas être copié ou déplacé dans lui-même"
+
+#: src/services/file_ops/engine.rs:914
+msgid "Links can only point to local files"
+msgstr "Les liens ne peuvent pointer que vers des fichiers locaux"
+
+#: src/services/file_ops/engine.rs:1067
+msgid "Only items at the top of the Trash can be restored"
+msgstr "Seuls les éléments à la racine de la corbeille peuvent être restaurés"
+
+#: src/services/file_ops/engine.rs:1086
+msgid "The item is no longer in the Trash"
+msgstr "L’élément n’est plus dans la corbeille"
+
+#: src/services/file_ops/naming.rs:84 src/services/file_ops/naming.rs:116
+msgid "copy"
+msgstr "copie"
+
+#: src/services/file_ops/naming.rs:239
+msgid "The name can't be empty"
+msgstr "Le nom ne peut pas être vide"
+
+#: src/services/file_ops/naming.rs:240
+msgid "“.” and “..” are reserved names"
+msgstr "« . » et « .. » sont des noms réservés"
+
+#: src/services/file_ops/naming.rs:241
+msgid "The name can't contain “/”"
+msgstr "Le nom ne peut pas contenir « / »"
+
+#: src/services/file_ops/naming.rs:242
+msgid "The name is too long"
+msgstr "Le nom est trop long"
+
+#: src/services/file_ops/naming.rs:244
+#, rust-format
+msgid "This drive doesn't allow “{}” in names"
+msgstr "Ce lecteur n’accepte pas « {} » dans les noms"
+
+#: src/services/file_ops/naming.rs:246
+msgid "This name is reserved on this drive"
+msgstr "Ce nom est réservé sur ce lecteur"
+
+#: src/services/file_ops/naming.rs:248
+msgid "On this drive, names can't end with a dot or a space"
+msgstr "Sur ce lecteur, les noms ne peuvent pas se terminer par un point ou une espace"
+
+#: src/widgets/address_bar/crumbs_box.rs:39
+msgid "Show Parent Folders"
+msgstr "Afficher les dossiers parents"
+
+#: src/widgets/operations_popover/mod.rs:339
+#: src/widgets/operations_popover/mod.rs:451
+msgid "Pause"
+msgstr "Pause"
+
+#: src/widgets/operations_popover/mod.rs:345
+msgid "Cancel"
+msgstr "Annuler"
+
+#: src/widgets/operations_popover/mod.rs:449
+msgid "Resume"
+msgstr "Reprendre"

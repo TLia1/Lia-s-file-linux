@@ -547,9 +547,11 @@ version = "0.1.0"
 dependencies = [
  "async-channel",
  "gettext-rs",
+ "glib",
  "glib-build-tools",
  "gtk4",
  "libadwaita",
+ "libc",
  "serde",
  "serde_json",
  "sourceview5",

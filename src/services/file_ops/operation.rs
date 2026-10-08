@@ -5,72 +5,94 @@
 //! [`super::engine`]) while the UI thread watches the [`Control`].
 
 use std::path::PathBuf;
-use std::sync::{Condvar, Mutex};
+use std::sync::{Condvar, Mutex, OnceLock};
 
 use gtk::{gio, prelude::*};
+use serde::{Deserialize, Serialize};
 
 use crate::services::archives::ArchiveFormat;
+use crate::services::recovery::RecoveryLog;
 use crate::services::undo::UndoRecord;
 
 /// A file operation. Transfers take `(source, target)` pairs where the
 /// target is the exact path to create; conflicts may change it.
-#[derive(Clone, Debug)]
+///
+/// Serializable (files as URIs) so that the undo history survives a
+/// restart.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(tag = "op", rename_all = "kebab-case")]
 pub enum Operation {
     Copy {
+        #[serde(with = "uris::pairs")]
         pairs: Vec<(gio::File, gio::File)>,
     },
     Move {
+        #[serde(with = "uris::pairs")]
         pairs: Vec<(gio::File, gio::File)>,
     },
     /// Creates symbolic links: each target points to its source.
     Link {
+        #[serde(with = "uris::pairs")]
         pairs: Vec<(gio::File, gio::File)>,
     },
     /// Copies each file next to itself as "name (copy).ext".
     Duplicate {
+        #[serde(with = "uris::files")]
         files: Vec<gio::File>,
     },
     Trash {
+        #[serde(with = "uris::files")]
         files: Vec<gio::File>,
     },
     /// Permanent, recursive deletion.
     Delete {
+        #[serde(with = "uris::files")]
         files: Vec<gio::File>,
     },
     /// Moves files out of the trash. Accepts `trash:///` items or the
     /// original locations of trashed files.
     Restore {
+        #[serde(with = "uris::files")]
         files: Vec<gio::File>,
     },
     EmptyTrash,
     Rename {
+        #[serde(with = "uris::file")]
         file: gio::File,
         name: String,
     },
     /// Creates `name` in `parent`, numbered if it exists.
     CreateFolder {
+        #[serde(with = "uris::file")]
         parent: gio::File,
         name: String,
     },
     /// Creates an empty file, or a copy of `template`.
     CreateFile {
+        #[serde(with = "uris::file")]
         parent: gio::File,
         name: String,
+        #[serde(with = "uris::option")]
         template: Option<gio::File>,
     },
     /// Renames several files at once; names may be swapped between them.
     BatchRename {
+        #[serde(with = "uris::renames")]
         renames: Vec<(gio::File, String)>,
     },
     /// Extracts each archive into `destination`: its single top-level item
     /// directly, or several items into a folder named after the archive.
     Extract {
+        #[serde(with = "uris::files")]
         archives: Vec<gio::File>,
+        #[serde(with = "uris::file")]
         destination: gio::File,
     },
     /// Creates the archive `target` (renamed if it exists) of `sources`.
     Compress {
+        #[serde(with = "uris::files")]
         sources: Vec<gio::File>,
+        #[serde(with = "uris::file")]
         target: gio::File,
         format: ArchiveFormat,
     },
@@ -227,6 +249,102 @@ fn pairs_into(sources: &[gio::File], destination: &gio::File) -> Vec<(gio::File,
         .collect()
 }
 
+/// Serde helpers storing `gio::File`s as URIs.
+mod uris {
+    use gtk::{gio, prelude::*};
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    /// A file, serialized.
+    struct Out<'a>(&'a gio::File);
+
+    impl Serialize for Out<'_> {
+        fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+            s.serialize_str(&self.0.uri())
+        }
+    }
+
+    /// A file, deserialized.
+    struct In(gio::File);
+
+    impl<'de> Deserialize<'de> for In {
+        fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+            String::deserialize(d).map(|uri| Self(gio::File::for_uri(&uri)))
+        }
+    }
+
+    pub mod file {
+        use super::*;
+
+        pub fn serialize<S: Serializer>(file: &gio::File, s: S) -> Result<S::Ok, S::Error> {
+            Out(file).serialize(s)
+        }
+
+        pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<gio::File, D::Error> {
+            In::deserialize(d).map(|f| f.0)
+        }
+    }
+
+    pub mod option {
+        use super::*;
+
+        pub fn serialize<S: Serializer>(file: &Option<gio::File>, s: S) -> Result<S::Ok, S::Error> {
+            file.as_ref().map(Out).serialize(s)
+        }
+
+        pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Option<gio::File>, D::Error> {
+            Option::<In>::deserialize(d).map(|f| f.map(|f| f.0))
+        }
+    }
+
+    pub mod files {
+        use super::*;
+
+        pub fn serialize<S: Serializer>(files: &[gio::File], s: S) -> Result<S::Ok, S::Error> {
+            s.collect_seq(files.iter().map(Out))
+        }
+
+        pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<gio::File>, D::Error> {
+            Vec::<In>::deserialize(d).map(|v| v.into_iter().map(|f| f.0).collect())
+        }
+    }
+
+    pub mod pairs {
+        use super::*;
+
+        pub fn serialize<S: Serializer>(
+            pairs: &[(gio::File, gio::File)],
+            s: S,
+        ) -> Result<S::Ok, S::Error> {
+            s.collect_seq(pairs.iter().map(|(a, b)| (Out(a), Out(b))))
+        }
+
+        pub fn deserialize<'de, D: Deserializer<'de>>(
+            d: D,
+        ) -> Result<Vec<(gio::File, gio::File)>, D::Error> {
+            Vec::<(In, In)>::deserialize(d)
+                .map(|v| v.into_iter().map(|(a, b)| (a.0, b.0)).collect())
+        }
+    }
+
+    pub mod renames {
+        use super::*;
+
+        pub fn serialize<S: Serializer>(
+            renames: &[(gio::File, String)],
+            s: S,
+        ) -> Result<S::Ok, S::Error> {
+            s.collect_seq(renames.iter().map(|(f, name)| (Out(f), name)))
+        }
+
+        pub fn deserialize<'de, D: Deserializer<'de>>(
+            d: D,
+        ) -> Result<Vec<(gio::File, String)>, D::Error> {
+            Vec::<(In, String)>::deserialize(d)
+                .map(|v| v.into_iter().map(|(f, name)| (f.0, name)).collect())
+        }
+    }
+}
+
 // ── Questions asked to the user ────────────────────────────────────────────
 
 /// What the conflict dialog shows about one side of a conflict.
@@ -374,6 +492,8 @@ pub struct Control {
     paused: Mutex<bool>,
     resumed: Condvar,
     progress: Mutex<Progress>,
+    /// Temporary items to clean up after a crash (none in tests).
+    recovery: OnceLock<RecoveryLog>,
 }
 
 impl Control {
@@ -419,6 +539,33 @@ impl Control {
 
     pub fn update(&self, f: impl FnOnce(&mut Progress)) {
         f(&mut self.progress.lock().unwrap());
+    }
+
+    /// Records the temporary items of this job in `log`.
+    pub fn set_recovery_log(&self, log: RecoveryLog) {
+        let _ = self.recovery.set(log);
+    }
+
+    /// `file` is about to be created under a temporary name.
+    pub fn note_temporary(&self, file: &gio::File) {
+        if let (Some(log), Some(path)) = (self.recovery.get(), file.path()) {
+            log.temporary(&path);
+        }
+    }
+
+    /// `file` is about to be renamed to `temp` for a while.
+    pub fn note_moved_aside(&self, temp: &gio::File, file: &gio::File) {
+        if let (Some(log), Some(temp), Some(path)) = (self.recovery.get(), temp.path(), file.path())
+        {
+            log.moved_aside(&temp, &path);
+        }
+    }
+
+    /// The job ended: its temporary items are gone.
+    pub fn close_recovery_log(&self) {
+        if let Some(log) = self.recovery.get() {
+            log.close();
+        }
     }
 }
 

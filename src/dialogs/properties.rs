@@ -220,7 +220,7 @@ impl PropertiesDialog {
         let name = if file.parent().is_none() {
             folder_pane::display_name(file)
         } else {
-            item.display_name().to_string()
+            format::one_line(&item.display_name()).into_owned()
         };
         imp.name_label.set_label(&name);
         self.set_title(&gettext("“{}” Properties").replace("{}", &name));

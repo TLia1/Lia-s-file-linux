@@ -8,15 +8,16 @@
 //! bottom are the app-wide store, saved in the background shortly after
 //! each change.
 
-use std::cell::{Cell, OnceCell, RefCell};
+use std::cell::{OnceCell, RefCell};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::sync::Mutex;
+use std::sync::Arc;
 use std::time::Duration;
 
 use gtk::{gio, glib, prelude::*};
 use serde::{Deserialize, Serialize};
+
+use crate::util::persist::StateFile;
 
 /// Folders remembered at most; the least recently changed are forgotten.
 pub const MAX_FOLDERS: usize = 2000;
@@ -101,37 +102,27 @@ impl ViewStore {
 
 struct Persisted {
     store: RefCell<ViewStore>,
-    path: PathBuf,
+    file: Arc<StateFile>,
     save_timeout: RefCell<Option<glib::SourceId>>,
-    /// Incremented on each change; writes of older versions are dropped.
-    generation: Cell<u64>,
 }
 
 thread_local! {
     static STORE: OnceCell<Rc<Persisted>> = const { OnceCell::new() };
 }
 
-/// The newest version written to disk (writes happen on worker threads).
-static WRITTEN: Mutex<u64> = Mutex::new(0);
-
 fn persisted() -> Rc<Persisted> {
     STORE.with(|cell| {
         cell.get_or_init(|| {
-            let path = glib::user_data_dir().join("lia-files").join("views.json");
+            let file = StateFile::new(glib::user_data_dir().join("lia-files").join("views.json"));
             // Read once, at the first folder opened: a small local file.
-            let store = match std::fs::read_to_string(&path) {
-                Ok(json) => ViewStore::parse(&json),
-                Err(err) if err.kind() == std::io::ErrorKind::NotFound => ViewStore::default(),
-                Err(err) => {
-                    tracing::warn!("cannot read {}: {err}", path.display());
-                    ViewStore::default()
-                }
-            };
+            let store = file
+                .read()
+                .map(|json| ViewStore::parse(&json))
+                .unwrap_or_default();
             Rc::new(Persisted {
                 store: RefCell::new(store),
-                path,
+                file,
                 save_timeout: RefCell::default(),
-                generation: Cell::new(0),
             })
         })
         .clone()
@@ -170,7 +161,6 @@ pub fn remember(folder: &gio::File, view: Option<FolderView>) {
             }
         }
     }
-    persisted.generation.set(persisted.generation.get() + 1);
     schedule_save(&persisted);
 }
 
@@ -185,9 +175,7 @@ fn schedule_save(persisted: &Rc<Persisted>) {
         };
         persisted.save_timeout.take();
         let json = persisted.store.borrow().to_json();
-        let path = persisted.path.clone();
-        let generation = persisted.generation.get();
-        std::thread::spawn(move || write(&path, &json, generation));
+        persisted.file.save(json);
     });
     persisted.save_timeout.replace(Some(id));
 }
@@ -200,26 +188,6 @@ pub fn flush() {
     if let Some(id) = persisted.save_timeout.take() {
         id.remove();
         let json = persisted.store.borrow().to_json();
-        write(&persisted.path, &json, persisted.generation.get());
-    }
-}
-
-/// Replaces the file atomically, unless a newer version was written.
-fn write(path: &Path, json: &str, generation: u64) {
-    let mut written = WRITTEN.lock().unwrap_or_else(|e| e.into_inner());
-    if *written >= generation {
-        return;
-    }
-    let result = (|| {
-        if let Some(dir) = path.parent() {
-            std::fs::create_dir_all(dir)?;
-        }
-        let temp = path.with_extension("json.part");
-        std::fs::write(&temp, json)?;
-        std::fs::rename(&temp, path)
-    })();
-    match result {
-        Ok(()) => *written = generation,
-        Err(err) => tracing::warn!("cannot save {}: {err}", path.display()),
+        persisted.file.save_now(&json);
     }
 }

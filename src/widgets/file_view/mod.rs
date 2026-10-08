@@ -70,6 +70,11 @@ struct Rename {
     commit: Box<dyn Fn(String)>,
 }
 
+/// Grid columns before the grid's width is known.
+const FALLBACK_COLUMNS: u32 = 16;
+/// Grid columns at most, even on a very wide window.
+const MAX_COLUMNS: i32 = 64;
+
 mod imp {
     use super::*;
 
@@ -86,6 +91,8 @@ mod imp {
         pub(super) selection: RefCell<Option<gtk::MultiSelection>>,
         pub(super) context_menu: OnceCell<gtk::PopoverMenu>,
         pub(super) icon_size: Cell<i32>,
+        /// A max-columns update is queued.
+        pub(super) max_columns_idle: Cell<bool>,
         pub(super) mode: Cell<ViewMode>,
         pub(super) group_by: Cell<GroupBy>,
         /// The date periods the groups were computed with.
@@ -213,10 +220,16 @@ impl FileView {
 
         let grid_view = gtk::GridView::builder()
             .enable_rubberband(true)
-            .max_columns(64)
+            .max_columns(FALLBACK_COLUMNS)
             .css_classes(["grid-view"])
             .build();
         grid_view.set_factory(Some(&self.grid_factory()));
+        for view in [
+            column_view.upcast_ref::<gtk::Widget>(),
+            grid_view.upcast_ref(),
+        ] {
+            view.update_property(&[gtk::accessible::Property::Label(&gettext("Files"))]);
+        }
         grid_view.connect_activate(clone!(
             #[weak(rename_to = view)]
             self,
@@ -231,6 +244,13 @@ impl FileView {
             .child(&grid_view)
             .hscrollbar_policy(gtk::PolicyType::Never)
             .build();
+        if let Some(adjustment) = grid_view.hadjustment() {
+            adjustment.connect_page_size_notify(clone!(
+                #[weak(rename_to = view)]
+                self,
+                move |_| view.queue_max_columns_update()
+            ));
+        }
         for scroller in [&details_scroller, &grid_scroller] {
             self.add_background_menu_gesture(scroller);
             self.add_background_drop_target(scroller);
@@ -280,10 +300,23 @@ impl FileView {
     // ── Public API ─────────────────────────────────────────────────────────
 
     pub fn set_model(&self, model: &gtk::MultiSelection) {
+        self.imp().selection.replace(Some(model.clone()));
+        self.attach_model();
+    }
+
+    /// Only the visible view gets the model: a hidden one would still
+    /// rebuild its rows on every change, which tripled the time to load
+    /// a folder.
+    fn attach_model(&self) {
         let imp = self.imp();
-        imp.column_view.get().unwrap().set_model(Some(model));
-        imp.grid_view.get().unwrap().set_model(Some(model));
-        imp.selection.replace(Some(model.clone()));
+        let model = imp.selection.borrow().clone();
+        let details = imp.mode.get() == ViewMode::Details;
+        let (Some(column_view), Some(grid_view)) = (imp.column_view.get(), imp.grid_view.get())
+        else {
+            return;
+        };
+        column_view.set_model(model.as_ref().filter(|_| details));
+        grid_view.set_model(model.as_ref().filter(|_| !details));
     }
 
     /// The column-header sorter of the details view. The grid view shares it,
@@ -303,6 +336,7 @@ impl FileView {
         }
         let had_focus = self.focus_child().is_some();
         imp.mode.set(mode);
+        self.attach_model();
         imp.stack.get().unwrap().set_visible_child_name(mode.nick());
         if had_focus {
             self.grab_focus();
@@ -426,6 +460,36 @@ impl FileView {
             .get()
             .unwrap()
             .set_factory(Some(&self.grid_factory()));
+        self.queue_max_columns_update();
+    }
+
+    /// Limits the grid to the columns that fit its width. GridView keeps
+    /// widgets for a few dozen rows of `max-columns` items while a folder
+    /// streams in, so a loose limit (64) made it build a widget for nearly
+    /// every item: 15 s instead of 2 s to show 100 000 files.
+    fn queue_max_columns_update(&self) {
+        if self.imp().max_columns_idle.replace(true) {
+            return;
+        }
+        // Not during the allocation that changed the width.
+        glib::idle_add_local_once(clone!(
+            #[weak(rename_to = view)]
+            self,
+            move || {
+                let imp = view.imp();
+                imp.max_columns_idle.set(false);
+                let grid_view = imp.grid_view.get().unwrap();
+                let width = grid_view.width();
+                let columns = if width > 0 {
+                    // Cells are at least this wide (see `grid_factory`).
+                    let cell = imp.icon_size.get() + 32;
+                    (width / cell.max(1)).clamp(1, MAX_COLUMNS) as u32
+                } else {
+                    FALLBACK_COLUMNS
+                };
+                grid_view.set_max_columns(columns);
+            }
+        ));
     }
 
     pub fn scroll_to(&self, position: u32, select: bool) {
@@ -707,7 +771,7 @@ impl FileView {
             let image = row.first_child().and_downcast::<gtk::Image>().unwrap();
             let label = row.last_child().and_downcast::<gtk::Label>().unwrap();
             image.set_from_gicon(&item.icon().unwrap_or_else(fallback_icon));
-            label.set_label(&item.display_name());
+            label.set_label(&format::one_line(&item.display_name()));
             style_item(&row, &item);
         });
         factory.connect_teardown(clone!(
@@ -846,9 +910,11 @@ impl FileView {
             let image = cell.first_child().and_downcast::<ThumbnailImage>().unwrap();
             let label = cell.last_child().and_downcast::<gtk::Label>().unwrap();
             image.set_item(Some(&item));
-            label.set_label(&item.display_name());
+            let name = item.display_name();
+            let name = format::one_line(&name);
+            label.set_label(&name);
             style_item(&cell, &item);
-            cell.set_tooltip_text(Some(&item.display_name()));
+            cell.set_tooltip_text(Some(&name));
         });
         // Unbound cells stop waiting for their thumbnail.
         factory.connect_unbind(|_, list_item| {

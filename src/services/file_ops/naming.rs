@@ -104,7 +104,8 @@ fn strip_copy_marker(stem: &str) -> &str {
 pub fn numbered_name(name: &str, is_dir: bool, n: u32) -> String {
     let (stem, extension) = split_extension(name, is_dir);
     let (base, _) = strip_counter(stem);
-    format!("{base} ({n}){extension}")
+    let marker = format!(" ({n}){extension}");
+    format!("{}{marker}", shorten(base, marker.len()))
 }
 
 /// "name (copy).ext", then "name (copy 2).ext"… for duplicates. Copying a
@@ -113,11 +114,27 @@ pub fn copy_name(name: &str, is_dir: bool, n: u32) -> String {
     let (stem, extension) = split_extension(name, is_dir);
     let base = strip_copy_marker(stem);
     let word = gettext("copy");
-    if n <= 1 {
-        format!("{base} ({word}){extension}")
+    let marker = if n <= 1 {
+        format!(" ({word}){extension}")
     } else {
-        format!("{base} ({word} {n}){extension}")
+        format!(" ({word} {n}){extension}")
+    };
+    format!("{}{marker}", shorten(base, marker.len()))
+}
+
+/// `base` cut (at a character boundary) so that `suffix_len` more bytes
+/// fit in a name: a long name still gets a numbered variant rather than
+/// one the file system refuses.
+fn shorten(base: &str, suffix_len: usize) -> &str {
+    let room = MAX_NAME_BYTES.saturating_sub(suffix_len);
+    if base.len() <= room {
+        return base;
     }
+    let mut end = room;
+    while !base.is_char_boundary(end) {
+        end -= 1;
+    }
+    base[..end].trim_end()
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -159,6 +176,40 @@ pub fn unique_name(
 pub fn part_name(name: &str) -> Option<String> {
     let part = format!(".{name}.part");
     (part.len() <= MAX_NAME_BYTES).then_some(part)
+}
+
+/// `name` changed so that FAT, exFAT and NTFS can store it, or `None` if
+/// it can be stored as is. Forbidden characters, control characters and
+/// trailing dots or spaces (which FAT silently drops, merging "a." with
+/// "a") become "_"; reserved device names get a "_" after the stem; bytes
+/// that aren't UTF-8 become "�".
+pub fn portable_name(name: &std::ffi::OsStr) -> Option<String> {
+    let original = name.to_string_lossy();
+    let mut name: String = original
+        .chars()
+        .map(|c| {
+            if PORTABLE_FORBIDDEN.contains(&c) || c.is_control() {
+                '_'
+            } else {
+                c
+            }
+        })
+        .collect();
+    let kept = name.trim_end_matches(['.', ' ']).len();
+    if kept < name.len() {
+        let dropped = name.len() - kept;
+        name.truncate(kept);
+        name.extend(std::iter::repeat_n('_', dropped));
+    }
+    let stem_len = name.find('.').unwrap_or(name.len());
+    if RESERVED_NAMES
+        .iter()
+        .any(|r| r.eq_ignore_ascii_case(name[..stem_len].trim_end()))
+    {
+        name.insert(stem_len, '_');
+    }
+    let unchanged = matches!(original, std::borrow::Cow::Borrowed(_)) && name == original;
+    (!unchanged).then_some(name)
 }
 
 /// Whether a file system type (`filesystem::type`) needs Windows-portable
@@ -299,6 +350,41 @@ mod tests {
             unique_name("a.txt", false, UniqueStyle::Copy, exists),
             "a (copy 2).txt"
         );
+    }
+
+    #[test]
+    fn portable_names() {
+        use std::os::unix::ffi::OsStrExt;
+        let portable = |name: &[u8]| portable_name(std::ffi::OsStr::from_bytes(name));
+        assert_eq!(portable(b"report.pdf"), None);
+        assert_eq!(portable("été.txt".as_bytes()), None);
+        assert_eq!(portable(b"a:b?.txt").as_deref(), Some("a_b_.txt"));
+        assert_eq!(portable(b"line\nbreak").as_deref(), Some("line_break"));
+        assert_eq!(portable(b"tab\there").as_deref(), Some("tab_here"));
+        assert_eq!(portable(b"dots..").as_deref(), Some("dots__"));
+        assert_eq!(portable(b"space ").as_deref(), Some("space_"));
+        assert_eq!(portable(b"CON").as_deref(), Some("CON_"));
+        assert_eq!(portable(b"nul.tar.gz").as_deref(), Some("nul_.tar.gz"));
+        assert_eq!(portable(b"CONSOLE.txt"), None);
+        assert_eq!(portable(b"bad\xff.txt").as_deref(), Some("bad\u{FFFD}.txt"));
+        // The result is always valid where the original wasn't.
+        for name in [&b"a<b>|*"[..], b"x.", b"aux.c", b"q\x01"] {
+            assert_eq!(validate_name(&portable(name).unwrap(), true), Ok(()));
+        }
+    }
+
+    #[test]
+    fn long_names_are_shortened_to_fit_a_marker() {
+        let long = format!("{}.txt", "é".repeat(125)); // 254 bytes
+        for name in [
+            numbered_name(&long, false, 2),
+            copy_name(&long, false, 1),
+            copy_name(&long, false, 12),
+        ] {
+            assert!(name.len() <= MAX_NAME_BYTES, "{} bytes", name.len());
+            assert!(name.ends_with(").txt"));
+        }
+        assert_eq!(numbered_name("short.txt", false, 2), "short (2).txt");
     }
 
     #[test]

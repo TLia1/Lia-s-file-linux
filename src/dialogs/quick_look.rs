@@ -39,7 +39,8 @@ impl QuickLook {
             task.abort();
         }
         self.item.replace(Some(item.clone()));
-        self.title.set_title(&item.display_name());
+        self.title
+            .set_title(&format::one_line(&item.display_name()));
         let kind = if item.is_dir() {
             gettext("Folder")
         } else {
