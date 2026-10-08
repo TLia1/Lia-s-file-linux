@@ -87,3 +87,25 @@ Unplug the mouse:
 - [ ] Kill the app (`kill -9`) during a large copy, restart it: the hidden
       `.name.part` file is gone (see `~/.local/state/lia-files/recovery/`)
       and Ctrl+Z still undoes the last action from before the crash.
+
+### Integration
+
+- [ ] "Show in folder" from a browser's downloads opens the folder with the
+      file selected. Or by hand:
+      `gdbus call --session --dest org.freedesktop.FileManager1 --object-path /org/freedesktop/FileManager1 --method org.freedesktop.FileManager1.ShowItems "['file:///etc/hosts']" ""`
+      (`ShowItemProperties` opens Properties; `ShowFolders` opens folders).
+      Another running file manager may own the name: quit it first.
+
+## Release
+
+1. Bump the version in `Cargo.toml` and `meson.build`, and add a
+   `<release>` with notes at the top of the metainfo `<releases>`.
+2. `cargo build`, then `build-aux/flatpak-cargo-sources.py` (Cargo.lock
+   changed) and `tools/screenshots.sh` if the UI changed.
+3. Update the translations: `meson compile -C build lia-files-pot lia-files-update-po`,
+   translate the new strings in `po/fr.po`.
+4. Commit, tag `vX.Y.Z` and push the tag: CI builds the Flatpak bundle and
+   attaches it to a GitHub release. The metainfo screenshot URLs point at
+   the tag, so the tag must contain `data/screenshots/`.
+5. AUR: copy `build-aux/PKGBUILD`, set `pkgver`, run `updpkgsums` and
+   `makepkg --printsrcinfo > .SRCINFO`, then push to the AUR.

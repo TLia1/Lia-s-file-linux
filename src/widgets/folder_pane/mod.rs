@@ -685,6 +685,7 @@ impl FolderPane {
             if imp.sort_model.get().unwrap().n_items() > 0 {
                 imp.file_view.scroll_to(0, false);
             }
+            self.apply_pending_selection(false);
             return;
         };
         let sort_model = imp.sort_model.get().unwrap();

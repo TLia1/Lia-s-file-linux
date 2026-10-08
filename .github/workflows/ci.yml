@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Format, lint & test
+    runs-on: ubuntu-latest
+    # Arch has the GTK and libadwaita versions the app needs.
+    container: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: >
+          pacman -Syu --noconfirm --needed
+          base-devel git rust meson blueprint-compiler
+          gtk4 libadwaita gtksourceview5 libarchive
+          appstream desktop-file-utils python
+      - uses: actions/checkout@v5
+      - uses: actions/cache@v4
+        with:
+          path: |
+            /home/builder/.cargo/registry
+            target
+          key: cargo-${{ hashFiles('Cargo.lock') }}
+      # Permission tests are pointless as root, so everything runs as a user.
+      - name: Create build user
+        run: |
+          useradd -m builder
+          mkdir -p /home/builder/.cargo
+          chown -R builder: . /home/builder
+      - name: Format
+        run: su builder -c "cargo fmt --check"
+      - name: Clippy
+        run: su builder -c "cargo clippy --all-targets --locked -- -D warnings"
+      - name: Tests
+        run: su builder -c "cargo test --locked"
+      - name: Validate data files
+        run: |
+          su builder -c "meson setup _build && meson test -C _build --print-errorlogs validate-desktop validate-schema validate-metainfo"
+      - name: Flatpak cargo sources are up to date
+        run: |
+          build-aux/flatpak-cargo-sources.py Cargo.lock /tmp/cargo-sources.json
+          cmp build-aux/cargo-sources.json /tmp/cargo-sources.json ||
+            { echo "Run build-aux/flatpak-cargo-sources.py and commit the result"; exit 1; }
+
+  flatpak:
+    name: Flatpak
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v5
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: lia-files.flatpak
+          manifest-path: build-aux/io.github.lia.Files.json
+          cache-key: flatpak-builder-${{ github.sha }}
+
+  release:
+    name: Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [check, flatpak]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          path: artifacts
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*.flatpak
+          generate_release_notes: true

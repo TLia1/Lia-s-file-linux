@@ -83,9 +83,9 @@ fn percent_decode(text: &str) -> Vec<u8> {
     out
 }
 
-/// The user's home trash.
+/// The user's home trash (the host's, in a Flatpak).
 pub fn home_trash() -> PathBuf {
-    glib::user_data_dir().join("Trash")
+    crate::util::sandbox::host_data_dir().join("Trash")
 }
 
 /// The trash directories that may hold an item deleted from `original`:

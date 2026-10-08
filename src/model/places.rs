@@ -75,7 +75,11 @@ pub fn is_this_pc(file: &gio::File) -> bool {
 }
 
 pub fn bookmarks_file() -> gio::File {
-    gio::File::for_path(glib::user_config_dir().join("gtk-3.0").join("bookmarks"))
+    gio::File::for_path(
+        crate::util::sandbox::host_config_dir()
+            .join("gtk-3.0")
+            .join("bookmarks"),
+    )
 }
 
 /// Reads the bookmarks file; a missing file means no bookmarks.

@@ -40,3 +40,28 @@ test(
   compile_schemas,
   args: ['--strict', '--dry-run', meson.current_source_dir()],
 )
+
+# Lets other apps reveal files ("Show in folder") even when Lia Files isn't
+# running. Not installed in a Flatpak, which can only export names under
+# its own app ID. The file isn't named after the bus name, so it can be
+# installed alongside other file managers' (the bus picks one).
+if get_option('file-manager-dbus-service')
+  dbus_conf = configuration_data()
+  dbus_conf.set('bindir', bindir)
+  configure_file(
+    input: app_id + '.FileManager1.service.in',
+    output: app_id + '.FileManager1.service',
+    configuration: dbus_conf,
+    install: true,
+    install_dir: datadir / 'dbus-1' / 'services',
+  )
+endif
+
+appstreamcli = find_program('appstreamcli', required: false)
+if appstreamcli.found()
+  test(
+    'validate-metainfo',
+    appstreamcli,
+    args: ['validate', '--no-net', '--explain', metainfo_file],
+  )
+endif

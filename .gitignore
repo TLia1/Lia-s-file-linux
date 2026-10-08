@@ -5,3 +5,7 @@
 /.flatpak
 *.ui.tmp
 /.idea
+/build-aux/src
+/build-aux/pkg
+/build-aux/*.pkg.tar.*
+/build-aux/*.tar.gz

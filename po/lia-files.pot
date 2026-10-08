@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lia-files\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-08 09:20+0200\n"
+"POT-Creation-Date: 2026-10-08 11:04+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -36,10 +36,88 @@ msgstr ""
 msgid "folder;manager;explore;disk;filesystem;"
 msgstr ""
 
-#: data/io.github.lia.Files.metainfo.xml.in:9
+#: data/io.github.lia.Files.metainfo.xml.in:12
 msgid ""
 "A clean, modern file manager with a tidy command bar, breadcrumb address "
 "bar, tabs and a details pane."
+msgstr ""
+
+#: data/io.github.lia.Files.metainfo.xml.in:16
+msgid "Features:"
+msgstr ""
+
+#: data/io.github.lia.Files.metainfo.xml.in:18
+msgid ""
+"Details and grid views with thumbnails, grouping and per-folder view settings"
+msgstr ""
+
+#: data/io.github.lia.Files.metainfo.xml.in:19
+msgid "Tabs, a sidebar with pinned folders, drives and network locations"
+msgstr ""
+
+#: data/io.github.lia.Files.metainfo.xml.in:20
+msgid ""
+"Safe file operations: everything goes to the Trash first and can be undone"
+msgstr ""
+
+#: data/io.github.lia.Files.metainfo.xml.in:21
+msgid "Background copies with progress, pause, cancel and conflict resolution"
+msgstr ""
+
+#: data/io.github.lia.Files.metainfo.xml.in:22
+msgid "Instant filtering and fast recursive search with filters"
+msgstr ""
+
+#: data/io.github.lia.Files.metainfo.xml.in:23
+msgid "A details pane with previews, and Quick Look with the Space key"
+msgstr ""
+
+#: data/io.github.lia.Files.metainfo.xml.in:24
+msgid "Compress and extract archives, batch rename, properties and permissions"
+msgstr ""
+
+#: data/io.github.lia.Files.metainfo.xml.in:25
+msgid "Works with network shares, phones and removable drives"
+msgstr ""
+
+#: data/io.github.lia.Files.metainfo.xml.in:57
+msgid "Details view with the details pane"
+msgstr ""
+
+#: data/io.github.lia.Files.metainfo.xml.in:61
+msgid "Grid view with thumbnails and tabs, in dark style"
+msgstr ""
+
+#: data/io.github.lia.Files.metainfo.xml.in:65
+msgid "Quick Look preview"
+msgstr ""
+
+#: data/io.github.lia.Files.metainfo.xml.in:73
+msgid "folder"
+msgstr ""
+
+#: data/io.github.lia.Files.metainfo.xml.in:74
+msgid "file manager"
+msgstr ""
+
+#: data/io.github.lia.Files.metainfo.xml.in:75
+msgid "explorer"
+msgstr ""
+
+#: data/io.github.lia.Files.metainfo.xml.in:76
+msgid "files"
+msgstr ""
+
+#: data/io.github.lia.Files.metainfo.xml.in:82
+msgid "First stable release."
+msgstr ""
+
+#: data/io.github.lia.Files.metainfo.xml.in:84
+msgid "Other apps can reveal files in Lia Files (“Show in folder”)"
+msgstr ""
+
+#: data/io.github.lia.Files.metainfo.xml.in:85
+msgid "Flatpak and Arch Linux packages"
 msgstr ""
 
 #: data/io.github.lia.Files.gschema.xml:36
@@ -162,6 +240,7 @@ msgid "Servers recently connected to, most recent first"
 msgstr ""
 
 #: data/resources/ui/window.blp:9 data/resources/ui/shortcuts.blp:123
+#: src/widgets/file_view/mod.rs:231
 msgid "Files"
 msgstr ""
 
@@ -193,289 +272,290 @@ msgstr ""
 msgid "Refresh (F5)"
 msgstr ""
 
-#: data/resources/ui/window.blp:131 data/resources/ui/shortcuts.blp:34
+#: data/resources/ui/window.blp:131 data/resources/ui/window.blp:135
+#: data/resources/ui/shortcuts.blp:34
 msgid "Search"
 msgstr ""
 
-#: data/resources/ui/window.blp:145
+#: data/resources/ui/window.blp:150
 msgid "Create a new item"
 msgstr ""
 
-#: data/resources/ui/window.blp:149
+#: data/resources/ui/window.blp:154
 msgid "New"
 msgstr ""
 
-#: data/resources/ui/window.blp:160
+#: data/resources/ui/window.blp:165
 msgid "Restore the selected items"
 msgstr ""
 
-#: data/resources/ui/window.blp:165 src/services/undo.rs:49
+#: data/resources/ui/window.blp:170 src/services/undo.rs:49
 msgid "Restore"
 msgstr ""
 
-#: data/resources/ui/window.blp:176
+#: data/resources/ui/window.blp:181
 msgid "Permanently delete everything in the Trash"
 msgstr ""
 
-#: data/resources/ui/window.blp:181
+#: data/resources/ui/window.blp:186
 msgid "Empty Trash"
 msgstr ""
 
-#: data/resources/ui/window.blp:196
+#: data/resources/ui/window.blp:201
 msgid "Cut (Ctrl+X)"
 msgstr ""
 
-#: data/resources/ui/window.blp:206
+#: data/resources/ui/window.blp:211
 msgid "Copy (Ctrl+C)"
 msgstr ""
 
-#: data/resources/ui/window.blp:216
+#: data/resources/ui/window.blp:221
 msgid "Paste (Ctrl+V)"
 msgstr ""
 
-#: data/resources/ui/window.blp:226
+#: data/resources/ui/window.blp:231
 msgid "Rename (F2)"
 msgstr ""
 
-#: data/resources/ui/window.blp:236
+#: data/resources/ui/window.blp:241
 msgid "Move to Trash (Delete)"
 msgstr ""
 
-#: data/resources/ui/window.blp:247
+#: data/resources/ui/window.blp:252
 msgid "Delete Permanently (Delete)"
 msgstr ""
 
-#: data/resources/ui/window.blp:258
+#: data/resources/ui/window.blp:263
 msgid "Extract the selected archives here"
 msgstr ""
 
-#: data/resources/ui/window.blp:263 src/services/undo.rs:51
+#: data/resources/ui/window.blp:268 src/services/undo.rs:51
 msgid "Extract"
 msgstr ""
 
-#: data/resources/ui/window.blp:279 data/resources/ui/window.blp:283
+#: data/resources/ui/window.blp:284 data/resources/ui/window.blp:288
 msgid "Sort"
 msgstr ""
 
-#: data/resources/ui/window.blp:294 data/resources/ui/window.blp:298
+#: data/resources/ui/window.blp:299 data/resources/ui/window.blp:303
 #: data/resources/ui/shortcuts.blp:50 src/dialogs/preferences.rs:90
 msgid "View"
 msgstr ""
 
-#: data/resources/ui/window.blp:309
+#: data/resources/ui/window.blp:314
 msgid "More Options"
 msgstr ""
 
-#: data/resources/ui/window.blp:321
+#: data/resources/ui/window.blp:326
 msgid "Details Pane (Alt+Shift+P)"
 msgstr ""
 
-#: data/resources/ui/window.blp:326 src/dialogs/preferences.rs:92
+#: data/resources/ui/window.blp:331 src/dialogs/preferences.rs:92
 msgid "Details"
 msgstr ""
 
-#: data/resources/ui/window.blp:350 data/resources/ui/window.blp:378
+#: data/resources/ui/window.blp:355 data/resources/ui/window.blp:383
 msgid "Drag to resize"
 msgstr ""
 
-#: data/resources/ui/window.blp:428
+#: data/resources/ui/window.blp:433
 msgid "Details (Ctrl+1)"
 msgstr ""
 
-#: data/resources/ui/window.blp:439
+#: data/resources/ui/window.blp:444
 msgid "Grid (Ctrl+2)"
 msgstr ""
 
-#: data/resources/ui/window.blp:456
+#: data/resources/ui/window.blp:461
 msgid "_New Window"
 msgstr ""
 
-#: data/resources/ui/window.blp:461
+#: data/resources/ui/window.blp:466
 msgid "New _Tab"
 msgstr ""
 
-#: data/resources/ui/window.blp:468
+#: data/resources/ui/window.blp:473
 msgid "Connect to _Server…"
 msgstr ""
 
-#: data/resources/ui/window.blp:475 data/resources/ui/window.blp:641
-#: src/widgets/file_view/mod.rs:1663
+#: data/resources/ui/window.blp:480 data/resources/ui/window.blp:646
+#: src/widgets/file_view/mod.rs:1727
 msgid "Show _Hidden Files"
 msgstr ""
 
-#: data/resources/ui/window.blp:480 src/widgets/file_view/mod.rs:1665
+#: data/resources/ui/window.blp:485 src/widgets/file_view/mod.rs:1729
 msgid "Sort _Folders Before Files"
 msgstr ""
 
-#: data/resources/ui/window.blp:485
+#: data/resources/ui/window.blp:490
 msgid "_Reopen Tabs on Startup"
 msgstr ""
 
-#: data/resources/ui/window.blp:492
+#: data/resources/ui/window.blp:497
 msgid "_Preferences"
 msgstr ""
 
-#: data/resources/ui/window.blp:497
+#: data/resources/ui/window.blp:502
 msgid "_Keyboard Shortcuts"
 msgstr ""
 
-#: data/resources/ui/window.blp:502
+#: data/resources/ui/window.blp:507
 msgid "_About Files"
 msgstr ""
 
-#: data/resources/ui/window.blp:511 src/widgets/file_view/mod.rs:1628
+#: data/resources/ui/window.blp:516 src/widgets/file_view/mod.rs:1692
 msgid "_Folder"
 msgstr ""
 
-#: data/resources/ui/window.blp:516 src/widgets/file_view/mod.rs:1629
+#: data/resources/ui/window.blp:521 src/widgets/file_view/mod.rs:1693
 msgid "_Empty File"
 msgstr ""
 
-#: data/resources/ui/window.blp:525 data/resources/ui/window.blp:580
-#: src/widgets/file_view/mod.rs:1684 src/widgets/file_view/mod.rs:1695
+#: data/resources/ui/window.blp:530 data/resources/ui/window.blp:585
+#: src/widgets/file_view/mod.rs:1748 src/widgets/file_view/mod.rs:1759
 msgid "_Name"
 msgstr ""
 
-#: data/resources/ui/window.blp:531 data/resources/ui/window.blp:586
-#: src/widgets/file_view/mod.rs:1685 src/widgets/file_view/mod.rs:1696
+#: data/resources/ui/window.blp:536 data/resources/ui/window.blp:591
+#: src/widgets/file_view/mod.rs:1749 src/widgets/file_view/mod.rs:1760
 msgid "_Date Modified"
 msgstr ""
 
-#: data/resources/ui/window.blp:537 data/resources/ui/window.blp:592
-#: src/widgets/file_view/mod.rs:1686 src/widgets/file_view/mod.rs:1697
+#: data/resources/ui/window.blp:542 data/resources/ui/window.blp:597
+#: src/widgets/file_view/mod.rs:1750 src/widgets/file_view/mod.rs:1761
 msgid "_Type"
 msgstr ""
 
-#: data/resources/ui/window.blp:543 data/resources/ui/window.blp:598
-#: src/widgets/file_view/mod.rs:1687 src/widgets/file_view/mod.rs:1698
+#: data/resources/ui/window.blp:548 data/resources/ui/window.blp:603
+#: src/widgets/file_view/mod.rs:1751 src/widgets/file_view/mod.rs:1762
 msgid "_Size"
 msgstr ""
 
-#: data/resources/ui/window.blp:551 src/widgets/file_view/mod.rs:1704
+#: data/resources/ui/window.blp:556 src/widgets/file_view/mod.rs:1768
 msgid "_Ascending"
 msgstr ""
 
-#: data/resources/ui/window.blp:557 src/widgets/file_view/mod.rs:1705
+#: data/resources/ui/window.blp:562 src/widgets/file_view/mod.rs:1769
 msgid "D_escending"
 msgstr ""
 
-#: data/resources/ui/window.blp:565
+#: data/resources/ui/window.blp:570
 msgid "_Folders First"
 msgstr ""
 
-#: data/resources/ui/window.blp:570 src/widgets/file_view/mod.rs:1625
+#: data/resources/ui/window.blp:575 src/widgets/file_view/mod.rs:1689
 msgid "_Group By"
 msgstr ""
 
-#: data/resources/ui/window.blp:574 src/widgets/file_view/mod.rs:1694
+#: data/resources/ui/window.blp:579 src/widgets/file_view/mod.rs:1758
 msgid "_None"
 msgstr ""
 
-#: data/resources/ui/window.blp:610 src/widgets/file_view/mod.rs:1617
+#: data/resources/ui/window.blp:615 src/widgets/file_view/mod.rs:1681
 msgid "_Details"
 msgstr ""
 
-#: data/resources/ui/window.blp:616 src/widgets/file_view/mod.rs:1618
+#: data/resources/ui/window.blp:621 src/widgets/file_view/mod.rs:1682
 msgid "_Grid"
 msgstr ""
 
-#: data/resources/ui/window.blp:624
+#: data/resources/ui/window.blp:629
 msgid "Zoom _In"
 msgstr ""
 
-#: data/resources/ui/window.blp:629
+#: data/resources/ui/window.blp:634
 msgid "Zoom _Out"
 msgstr ""
 
-#: data/resources/ui/window.blp:634
+#: data/resources/ui/window.blp:639
 msgid "_Reset Zoom"
 msgstr ""
 
-#: data/resources/ui/window.blp:646
+#: data/resources/ui/window.blp:651
 msgid "_Navigation Pane"
 msgstr ""
 
-#: data/resources/ui/window.blp:651
+#: data/resources/ui/window.blp:656
 msgid "D_etails Pane"
 msgstr ""
 
-#: data/resources/ui/window.blp:660 src/widgets/file_view/mod.rs:1655
+#: data/resources/ui/window.blp:665 src/widgets/file_view/mod.rs:1719
 #: src/window/mod.rs:1280
 msgid "_Undo"
 msgstr ""
 
-#: data/resources/ui/window.blp:665 src/widgets/file_view/mod.rs:1656
+#: data/resources/ui/window.blp:670 src/widgets/file_view/mod.rs:1720
 msgid "_Redo"
 msgstr ""
 
-#: data/resources/ui/window.blp:672 src/widgets/file_view/mod.rs:1574
+#: data/resources/ui/window.blp:677 src/widgets/file_view/mod.rs:1638
 msgid "D_uplicate"
 msgstr ""
 
-#: data/resources/ui/window.blp:677 src/widgets/file_view/mod.rs:1575
+#: data/resources/ui/window.blp:682 src/widgets/file_view/mod.rs:1639
 msgid "Create _Link"
 msgstr ""
 
-#: data/resources/ui/window.blp:682 src/widgets/file_view/mod.rs:1589
-#: src/widgets/file_view/mod.rs:1592
+#: data/resources/ui/window.blp:687 src/widgets/file_view/mod.rs:1653
+#: src/widgets/file_view/mod.rs:1656
 msgid "Co_mpress…"
 msgstr ""
 
-#: data/resources/ui/window.blp:687
+#: data/resources/ui/window.blp:692
 msgid "E_xtract To…"
 msgstr ""
 
-#: data/resources/ui/window.blp:694 src/widgets/file_view/mod.rs:1641
-#: src/widgets/file_view/mod.rs:1649
+#: data/resources/ui/window.blp:699 src/widgets/file_view/mod.rs:1705
+#: src/widgets/file_view/mod.rs:1713
 msgid "Select _All"
 msgstr ""
 
-#: data/resources/ui/window.blp:699
+#: data/resources/ui/window.blp:704
 msgid "_Invert Selection"
 msgstr ""
 
-#: data/resources/ui/window.blp:706 data/resources/ui/sidebar.blp:25
-#: src/widgets/file_view/mod.rs:1566
+#: data/resources/ui/window.blp:711 data/resources/ui/sidebar.blp:25
+#: src/widgets/file_view/mod.rs:1630
 msgid "Open in New _Tab"
 msgstr ""
 
-#: data/resources/ui/window.blp:711 src/widgets/file_view/mod.rs:1598
+#: data/resources/ui/window.blp:716 src/widgets/file_view/mod.rs:1662
 msgid "_Pin to Sidebar"
 msgstr ""
 
-#: data/resources/ui/window.blp:716 src/widgets/file_view/mod.rs:1599
-#: src/widgets/file_view/mod.rs:1674
+#: data/resources/ui/window.blp:721 src/widgets/file_view/mod.rs:1663
+#: src/widgets/file_view/mod.rs:1738
 msgid "Copy _Path"
 msgstr ""
 
-#: data/resources/ui/window.blp:721 src/widgets/file_view/mod.rs:1600
-#: src/widgets/file_view/mod.rs:1675
+#: data/resources/ui/window.blp:726 src/widgets/file_view/mod.rs:1664
+#: src/widgets/file_view/mod.rs:1739
 msgid "Open in Ter_minal"
 msgstr ""
 
-#: data/resources/ui/window.blp:728
+#: data/resources/ui/window.blp:733
 msgid "_Quick Look"
 msgstr ""
 
-#: data/resources/ui/window.blp:733 data/resources/ui/sidebar.blp:65
-#: src/widgets/file_view/mod.rs:1557 src/widgets/file_view/mod.rs:1605
-#: src/widgets/file_view/mod.rs:1676
+#: data/resources/ui/window.blp:738 data/resources/ui/sidebar.blp:65
+#: src/widgets/file_view/mod.rs:1621 src/widgets/file_view/mod.rs:1669
+#: src/widgets/file_view/mod.rs:1740
 msgid "P_roperties"
 msgstr ""
 
-#: data/resources/ui/window.blp:742
+#: data/resources/ui/window.blp:747
 msgid "_Duplicate Tab"
 msgstr ""
 
-#: data/resources/ui/window.blp:747
+#: data/resources/ui/window.blp:752
 msgid "Move to New _Window"
 msgstr ""
 
-#: data/resources/ui/window.blp:754
+#: data/resources/ui/window.blp:759
 msgid "Close _Other Tabs"
 msgstr ""
 
-#: data/resources/ui/window.blp:759
+#: data/resources/ui/window.blp:764
 msgid "_Close Tab"
 msgstr ""
 
@@ -508,7 +588,7 @@ msgid "Enter a location"
 msgstr ""
 
 #: data/resources/ui/address-bar.blp:39 src/widgets/details_pane/mod.rs:212
-#: src/widgets/details_pane/mod.rs:300 src/widgets/details_pane/mod.rs:361
+#: src/widgets/details_pane/mod.rs:301 src/widgets/details_pane/mod.rs:362
 #: src/dialogs/properties.rs:253 src/dialogs/properties.rs:337
 msgid "Location"
 msgstr ""
@@ -695,7 +775,7 @@ msgstr ""
 msgid "_Unpin"
 msgstr ""
 
-#: data/resources/ui/sidebar.blp:39 src/widgets/file_view/mod.rs:1640
+#: data/resources/ui/sidebar.blp:39 src/widgets/file_view/mod.rs:1704
 #: src/dialogs/file_ops.rs:197
 msgid "_Empty Trash"
 msgstr ""
@@ -712,7 +792,7 @@ msgstr ""
 msgid "_Eject"
 msgstr ""
 
-#: src/application.rs:298
+#: src/application.rs:352
 msgid "A clean, modern file manager"
 msgstr ""
 
@@ -767,22 +847,22 @@ msgid "%-d %B %Y, %H:%M"
 msgstr ""
 
 #: src/widgets/address_bar/mod.rs:377 src/widgets/address_bar/mod.rs:378
-#: src/widgets/folder_pane/mod.rs:1830 src/widgets/sidebar/mod.rs:461
+#: src/widgets/folder_pane/mod.rs:1831 src/widgets/sidebar/mod.rs:461
 #: src/dialogs/preferences.rs:64
 msgid "Home"
 msgstr ""
 
-#: src/widgets/address_bar/mod.rs:409 src/widgets/folder_pane/mod.rs:1833
+#: src/widgets/address_bar/mod.rs:409 src/widgets/folder_pane/mod.rs:1834
 #: src/widgets/sidebar/mod.rs:533
 msgid "Trash"
 msgstr ""
 
-#: src/widgets/address_bar/mod.rs:410 src/widgets/folder_pane/mod.rs:1834
+#: src/widgets/address_bar/mod.rs:410 src/widgets/folder_pane/mod.rs:1835
 #: src/widgets/sidebar/mod.rs:467 src/dialogs/preferences.rs:64
 msgid "Recent"
 msgstr ""
 
-#: src/widgets/address_bar/mod.rs:411 src/widgets/folder_pane/mod.rs:1835
+#: src/widgets/address_bar/mod.rs:411 src/widgets/folder_pane/mod.rs:1836
 #: src/widgets/sidebar/mod.rs:675
 msgid "This PC"
 msgstr ""
@@ -795,97 +875,97 @@ msgstr ""
 msgid "Computer"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:532
+#: src/widgets/file_view/mod.rs:596
 msgid "Name"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:541 src/widgets/details_pane/mod.rs:208
-#: src/widgets/details_pane/mod.rs:237 src/dialogs/properties.rs:229
-#: src/dialogs/quick_look.rs:44 src/dialogs/conflict.rs:168
+#: src/widgets/file_view/mod.rs:605 src/widgets/details_pane/mod.rs:208
+#: src/widgets/details_pane/mod.rs:238 src/dialogs/properties.rs:229
+#: src/dialogs/quick_look.rs:45 src/dialogs/conflict.rs:168
 msgid "Folder"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:562 src/widgets/details_pane/mod.rs:289
+#: src/widgets/file_view/mod.rs:626 src/widgets/details_pane/mod.rs:290
 #: src/dialogs/properties.rs:247
 msgid "Original location"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:582 src/widgets/details_pane/mod.rs:297
+#: src/widgets/file_view/mod.rs:646 src/widgets/details_pane/mod.rs:298
 msgid "Date deleted"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:594
+#: src/widgets/file_view/mod.rs:658
 msgid "Date modified"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:602 src/dialogs/properties.rs:239
+#: src/widgets/file_view/mod.rs:666 src/dialogs/properties.rs:239
 msgid "Type"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:610 src/widgets/details_pane/mod.rs:255
-#: src/widgets/details_pane/mod.rs:351 src/dialogs/properties.rs:267
+#: src/widgets/file_view/mod.rs:674 src/widgets/details_pane/mod.rs:256
+#: src/widgets/details_pane/mod.rs:352 src/dialogs/properties.rs:267
 #: src/dialogs/properties.rs:278 src/model/search_filters.rs:239
 msgid "Size"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:1547
+#: src/widgets/file_view/mod.rs:1611
 msgid "_Restore"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:1548 src/dialogs/file_ops.rs:73
+#: src/widgets/file_view/mod.rs:1612 src/dialogs/file_ops.rs:73
 msgid "_Delete Permanently"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:1553 src/widgets/file_view/mod.rs:1572
+#: src/widgets/file_view/mod.rs:1617 src/widgets/file_view/mod.rs:1636
 msgid "Cu_t"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:1553 src/widgets/file_view/mod.rs:1573
+#: src/widgets/file_view/mod.rs:1617 src/widgets/file_view/mod.rs:1637
 msgid "_Copy"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:1564 src/dialogs/open_with.rs:70
-#: src/dialogs/quick_look.rs:152
+#: src/widgets/file_view/mod.rs:1628 src/dialogs/open_with.rs:70
+#: src/dialogs/quick_look.rs:153
 msgid "_Open"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:1565
+#: src/widgets/file_view/mod.rs:1629
 msgid "Open _With…"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:1581
+#: src/widgets/file_view/mod.rs:1645
 msgid "_Rename…"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:1582
+#: src/widgets/file_view/mod.rs:1646
 msgid "Move to _Trash"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:1587
+#: src/widgets/file_view/mod.rs:1651
 msgid "E_xtract Here"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:1588
+#: src/widgets/file_view/mod.rs:1652
 msgid "Extract _To…"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:1615
+#: src/widgets/file_view/mod.rs:1679
 msgid "_View"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:1624
+#: src/widgets/file_view/mod.rs:1688
 msgid "_Sort By"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:1632
+#: src/widgets/file_view/mod.rs:1696
 msgid "_New"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:1648
+#: src/widgets/file_view/mod.rs:1712
 msgid "_Paste"
 msgstr ""
 
-#: src/widgets/file_view/mod.rs:1673
+#: src/widgets/file_view/mod.rs:1737
 msgid "_Refresh"
 msgstr ""
 
@@ -894,100 +974,100 @@ msgstr ""
 msgid "Search Results in {}"
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:830
+#: src/widgets/folder_pane/mod.rs:831
 #, rust-format
 msgid "Could not open “{}”"
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:881
+#: src/widgets/folder_pane/mod.rs:882
 msgid "Path copied"
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:883
+#: src/widgets/folder_pane/mod.rs:884
 msgid "Paths copied"
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:1033
+#: src/widgets/folder_pane/mod.rs:1034
 #: src/services/file_ops/engine/batch_rename.rs:109
 #, rust-format
 msgid "An item named “{}” already exists"
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:1430
+#: src/widgets/folder_pane/mod.rs:1431
 #, rust-format
 msgid "Search stopped after {} results"
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:1613
+#: src/widgets/folder_pane/mod.rs:1614
 msgid "Searching subfolders…"
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:1615
+#: src/widgets/folder_pane/mod.rs:1616
 msgid "Including subfolders"
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:1631
+#: src/widgets/folder_pane/mod.rs:1632
 msgid "Kind"
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:1640
+#: src/widgets/folder_pane/mod.rs:1641
 msgid "Date Modified"
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:1671 src/widgets/folder_pane/mod.rs:1711
+#: src/widgets/folder_pane/mod.rs:1672 src/widgets/folder_pane/mod.rs:1712
 msgid "No Results Found"
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:1673
+#: src/widgets/folder_pane/mod.rs:1674
 msgid "Nothing in this folder or its subfolders matches"
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:1681
+#: src/widgets/folder_pane/mod.rs:1682
 msgid "Trash Unavailable"
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:1683
+#: src/widgets/folder_pane/mod.rs:1684
 msgid "Access Denied"
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:1685
+#: src/widgets/folder_pane/mod.rs:1686
 msgid "Folder Not Found"
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:1687
+#: src/widgets/folder_pane/mod.rs:1688
 msgid "Not a Folder"
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:1689
+#: src/widgets/folder_pane/mod.rs:1690
 msgid "Unable to Open Folder"
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:1695
+#: src/widgets/folder_pane/mod.rs:1696
 msgid ""
 "Browsing the Trash needs GVfs: install the “gvfs” package. Moving files to "
 "the Trash and undoing it work without it."
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:1712
+#: src/widgets/folder_pane/mod.rs:1713
 msgid "Press Enter to search in subfolders too"
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:1716
+#: src/widgets/folder_pane/mod.rs:1717
 msgid "Folder Is Empty"
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:1720
+#: src/widgets/folder_pane/mod.rs:1721
 msgid "Hidden files are not shown. Press Ctrl+H to show them."
 msgstr ""
 
-#: src/widgets/folder_pane/mod.rs:1753
+#: src/widgets/folder_pane/mod.rs:1754
 #, rust-format
 msgid "{} selected"
 msgid_plural "{} selected"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/widgets/folder_pane/mod.rs:1807
+#: src/widgets/folder_pane/mod.rs:1808
 #, rust-format
 msgid "{} free"
 msgstr ""
@@ -1050,49 +1130,49 @@ msgstr ""
 msgid "Failed: {}"
 msgstr ""
 
-#: src/widgets/details_pane/mod.rs:210 src/widgets/details_pane/mod.rs:246
+#: src/widgets/details_pane/mod.rs:210 src/widgets/details_pane/mod.rs:247
 #: src/dialogs/properties.rs:365
 msgid "Contents"
 msgstr ""
 
-#: src/widgets/details_pane/mod.rs:213 src/widgets/details_pane/mod.rs:280
+#: src/widgets/details_pane/mod.rs:213 src/widgets/details_pane/mod.rs:281
 #: src/dialogs/properties.rs:290
 msgid "Modified"
 msgstr ""
 
-#: src/widgets/details_pane/mod.rs:263
+#: src/widgets/details_pane/mod.rs:264
 msgid "Dimensions"
 msgstr ""
 
 #. Translators: image dimensions, e.g. "1920 × 1080 pixels"
-#: src/widgets/details_pane/mod.rs:271
+#: src/widgets/details_pane/mod.rs:272
 #, rust-format
 msgid "{w} × {h} pixels"
 msgstr ""
 
-#: src/widgets/details_pane/mod.rs:283 src/dialogs/properties.rs:292
+#: src/widgets/details_pane/mod.rs:284 src/dialogs/properties.rs:292
 msgid "Created"
 msgstr ""
 
-#: src/widgets/details_pane/mod.rs:303 src/dialogs/properties.rs:260
+#: src/widgets/details_pane/mod.rs:304 src/dialogs/properties.rs:260
 msgid "Link target"
 msgstr ""
 
-#: src/widgets/details_pane/mod.rs:330
+#: src/widgets/details_pane/mod.rs:331
 #, rust-format
 msgid "{} item selected"
 msgid_plural "{} items selected"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/widgets/details_pane/mod.rs:334 src/dialogs/properties.rs:671
+#: src/widgets/details_pane/mod.rs:335 src/dialogs/properties.rs:671
 #, rust-format
 msgid "{} folder"
 msgid_plural "{} folders"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/widgets/details_pane/mod.rs:335 src/dialogs/properties.rs:673
+#: src/widgets/details_pane/mod.rs:336 src/dialogs/properties.rs:673
 #, rust-format
 msgid "{} file"
 msgid_plural "{} files"
@@ -1100,12 +1180,12 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. Translators: "2 folders, 5 files"
-#: src/widgets/details_pane/mod.rs:340 src/dialogs/properties.rs:678
+#: src/widgets/details_pane/mod.rs:341 src/dialogs/properties.rs:678
 #, rust-format
 msgid "{folders}, {files}"
 msgstr ""
 
-#: src/widgets/details_pane/mod.rs:349
+#: src/widgets/details_pane/mod.rs:350
 msgid "Size of files"
 msgstr ""
 
@@ -1363,7 +1443,11 @@ msgstr ""
 msgid "“{}” can be safely removed"
 msgstr ""
 
-#: src/services/volumes.rs:243
+#: src/services/volumes.rs:228
+msgid "Used space"
+msgstr ""
+
+#: src/services/volumes.rs:244
 #, rust-format
 msgid "{free} free of {size}"
 msgstr ""
@@ -1777,15 +1861,15 @@ msgstr ""
 msgid "Grid Icon Size"
 msgstr ""
 
-#: src/dialogs/quick_look.rs:154
+#: src/dialogs/quick_look.rs:155
 msgid "Open (Enter)"
 msgstr ""
 
-#: src/dialogs/quick_look.rs:158
+#: src/dialogs/quick_look.rs:159
 msgid "Previous Item (Left)"
 msgstr ""
 
-#: src/dialogs/quick_look.rs:162
+#: src/dialogs/quick_look.rs:163
 msgid "Next Item (Right)"
 msgstr ""
 
@@ -2387,19 +2471,19 @@ msgstr ""
 msgid "Huge"
 msgstr ""
 
-#: src/services/file_ops/engine.rs:652
+#: src/services/file_ops/engine.rs:655
 msgid "A folder can't be copied or moved into itself"
 msgstr ""
 
-#: src/services/file_ops/engine.rs:914
+#: src/services/file_ops/engine.rs:921
 msgid "Links can only point to local files"
 msgstr ""
 
-#: src/services/file_ops/engine.rs:1067
+#: src/services/file_ops/engine.rs:1074
 msgid "Only items at the top of the Trash can be restored"
 msgstr ""
 
-#: src/services/file_ops/engine.rs:1086
+#: src/services/file_ops/engine.rs:1093
 msgid "The item is no longer in the Trash"
 msgstr ""
 

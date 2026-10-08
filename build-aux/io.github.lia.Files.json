@@ -1,0 +1,73 @@
+{
+    "id": "io.github.lia.Files",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "51",
+    "sdk": "org.gnome.Sdk",
+    "sdk-extensions": [
+        "org.freedesktop.Sdk.Extension.rust-stable"
+    ],
+    "command": "lia-files",
+    "finish-args": [
+        "--share=ipc",
+        "--socket=wayland",
+        "--socket=fallback-x11",
+        "--device=dri",
+        "--filesystem=host",
+        "--filesystem=xdg-run/gvfs",
+        "--filesystem=xdg-run/gvfsd",
+        "--talk-name=org.gtk.vfs.*",
+        "--system-talk-name=org.freedesktop.UDisks2",
+        "--talk-name=org.freedesktop.Flatpak",
+        "--own-name=org.freedesktop.FileManager1"
+    ],
+    "build-options": {
+        "append-path": "/usr/lib/sdk/rust-stable/bin",
+        "env": {
+            "CARGO_HOME": "/run/build/lia-files/cargo",
+            "CARGO_NET_OFFLINE": "true"
+        }
+    },
+    "cleanup": [
+        "/include",
+        "/lib/pkgconfig",
+        "/share/man"
+    ],
+    "modules": [
+        {
+            "name": "blueprint-compiler",
+            "buildsystem": "meson",
+            "cleanup": [
+                "*"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/blueprint-compiler.git",
+                    "tag": "v0.22.2"
+                }
+            ]
+        },
+        {
+            "name": "lia-files",
+            "buildsystem": "meson",
+            "config-opts": [
+                "-Dprofile=release",
+                "-Dfile-manager-dbus-service=false"
+            ],
+            "sources": [
+                {
+                    "type": "dir",
+                    "path": "..",
+                    "skip": [
+                        ".flatpak",
+                        ".flatpak-builder",
+                        "_build",
+                        "build",
+                        "target"
+                    ]
+                },
+                "cargo-sources.json"
+            ]
+        }
+    ]
+}

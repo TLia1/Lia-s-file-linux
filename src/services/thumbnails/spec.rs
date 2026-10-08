@@ -57,9 +57,9 @@ impl ThumbSize {
     }
 }
 
-/// `$XDG_CACHE_HOME/thumbnails`.
+/// `$XDG_CACHE_HOME/thumbnails` (the host's, in a Flatpak).
 pub fn cache_root() -> PathBuf {
-    glib::user_cache_dir().join("thumbnails")
+    crate::util::sandbox::host_cache_dir().join("thumbnails")
 }
 
 /// The file name of a thumbnail: the MD5 of the file's URI.

@@ -5,15 +5,87 @@
   <project_license>GPL-3.0-or-later</project_license>
   <name>Lia Files</name>
   <summary>Browse and organize your files</summary>
+  <developer id="io.github.lia">
+    <name translate="no">Lia</name>
+  </developer>
   <description>
     <p>
       A clean, modern file manager with a tidy command bar, breadcrumb
       address bar, tabs and a details pane.
     </p>
+    <p>Features:</p>
+    <ul>
+      <li>Details and grid views with thumbnails, grouping and per-folder view settings</li>
+      <li>Tabs, a sidebar with pinned folders, drives and network locations</li>
+      <li>Safe file operations: everything goes to the Trash first and can be undone</li>
+      <li>Background copies with progress, pause, cancel and conflict resolution</li>
+      <li>Instant filtering and fast recursive search with filters</li>
+      <li>A details pane with previews, and Quick Look with the Space key</li>
+      <li>Compress and extract archives, batch rename, properties and permissions</li>
+      <li>Works with network shares, phones and removable drives</li>
+    </ul>
   </description>
+
   <launchable type="desktop-id">io.github.lia.Files.desktop</launchable>
+  <provides>
+    <binary>lia-files</binary>
+    <mediatype>inode/directory</mediatype>
+    <dbus type="user">org.freedesktop.FileManager1</dbus>
+  </provides>
+  <translation type="gettext">lia-files</translation>
+
+  <url type="homepage">https://github.com/TLia1/Lia-s-file-linux</url>
+  <url type="bugtracker">https://github.com/TLia1/Lia-s-file-linux/issues</url>
+  <url type="vcs-browser">https://github.com/TLia1/Lia-s-file-linux</url>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#f9d45c</color>
+    <color type="primary" scheme_preference="dark">#7a5500</color>
+  </branding>
+
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <control>touch</control>
+  </supports>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Details view with the details pane</caption>
+      <image>https://raw.githubusercontent.com/TLia1/Lia-s-file-linux/v1.0.0/data/screenshots/main.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Grid view with thumbnails and tabs, in dark style</caption>
+      <image>https://raw.githubusercontent.com/TLia1/Lia-s-file-linux/v1.0.0/data/screenshots/grid.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Quick Look preview</caption>
+      <image>https://raw.githubusercontent.com/TLia1/Lia-s-file-linux/v1.0.0/data/screenshots/quicklook.png</image>
+    </screenshot>
+  </screenshots>
+
   <content_rating type="oars-1.1"/>
+
+  <keywords>
+    <keyword>folder</keyword>
+    <keyword>file manager</keyword>
+    <keyword>explorer</keyword>
+    <keyword>files</keyword>
+  </keywords>
+
   <releases>
+    <release version="1.0.0" date="2026-10-08">
+      <description>
+        <p>First stable release.</p>
+        <ul>
+          <li>Other apps can reveal files in Lia Files (“Show in folder”)</li>
+          <li>Flatpak and Arch Linux packages</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-10-07"/>
   </releases>
 </component>

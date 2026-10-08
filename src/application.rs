@@ -7,6 +7,7 @@ use gtk::{gio, glib, subclass::prelude::*};
 use crate::config;
 use crate::dialogs;
 use crate::model::view_settings;
+use crate::services::file_manager1::{self, Request};
 use crate::services::file_ops::queue;
 use crate::services::recovery;
 use crate::services::undo::undo_manager;
@@ -41,6 +42,7 @@ mod imp {
             recover_interrupted_operations();
             app.setup_actions();
             app.setup_accels();
+            app.export_file_manager1();
         }
 
         fn activate(&self) {
@@ -120,6 +122,52 @@ impl Application {
         }
         if let Ok(path) = std::env::var("LIA_SCREENSHOT") {
             self.screenshot_and_quit(window, path);
+        }
+    }
+
+    /// Answers "Show in folder" and similar requests from other apps. Only
+    /// the primary instance runs `startup`, so only it owns the name.
+    fn export_file_manager1(&self) {
+        let Some(connection) = self.dbus_connection() else {
+            return;
+        };
+        file_manager1::export(
+            &connection,
+            glib::clone!(
+                #[weak(rename_to = app)]
+                self,
+                move |call| app.show_requested(call)
+            ),
+        );
+    }
+
+    /// Opens a window for a `org.freedesktop.FileManager1` call.
+    fn show_requested(&self, call: file_manager1::Call) {
+        if call.files.is_empty() {
+            return;
+        }
+        let window = Window::new(self);
+        match call.request {
+            Request::ShowFolders => {
+                for (i, folder) in call.files.iter().enumerate() {
+                    window.open_tab(folder, i == 0);
+                }
+            }
+            Request::ShowItems | Request::ShowItemProperties => {
+                for (i, (folder, items)) in file_manager1::group_by_parent(&call.files)
+                    .into_iter()
+                    .enumerate()
+                {
+                    window.open_tab(&folder, i == 0).select_files(items, false);
+                }
+            }
+        }
+        if !call.startup_id.is_empty() {
+            window.set_startup_id(&call.startup_id);
+        }
+        self.present_window(&window);
+        if call.request == Request::ShowItemProperties {
+            dialogs::properties::PropertiesDialog::present_for(&window, call.files);
         }
     }
 

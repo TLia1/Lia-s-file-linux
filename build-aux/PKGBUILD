@@ -1,0 +1,61 @@
+# Maintainer: Lia <hdefaut@gmail.com>
+pkgname=lia-files
+pkgver=1.0.0
+pkgrel=1
+pkgdesc='A clean, modern file manager'
+arch=(x86_64 aarch64)
+url='https://github.com/TLia1/Lia-s-file-linux'
+license=(GPL-3.0-or-later)
+depends=(
+  gcc-libs
+  glib2
+  glibc
+  gtk4
+  gtksourceview5
+  hicolor-icon-theme
+  libadwaita
+  libarchive
+)
+makedepends=(
+  blueprint-compiler
+  cargo
+  meson
+)
+checkdepends=(
+  appstream
+  desktop-file-utils
+)
+optdepends=(
+  'gvfs: trash, recent files and network locations'
+  'gvfs-mtp: phones and media players'
+  'gvfs-smb: Windows shares'
+  'udisks2: mounting drives'
+  'xdg-terminal-exec: choosing the terminal for "Open in Terminal"'
+)
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+# After tagging: updpkgsums
+sha256sums=('SKIP')
+
+_srcdir=Lia-s-file-linux-$pkgver
+
+prepare() {
+  cd "$_srcdir"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_NET_OFFLINE=true
+  arch-meson "$_srcdir" build -Dprofile=release
+  meson compile -C build
+}
+
+check() {
+  # The Rust tests run in CI; here, only check the installed data files.
+  meson test -C build --print-errorlogs validate-desktop validate-schema validate-metainfo
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+}

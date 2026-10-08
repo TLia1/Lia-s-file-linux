@@ -5,3 +5,9 @@ option(
   value: 'release',
   description: 'Cargo build profile',
 )
+option(
+  'file-manager-dbus-service',
+  type: 'boolean',
+  value: true,
+  description: 'Install a D-Bus service file that starts Lia Files for org.freedesktop.FileManager1 calls',
+)
