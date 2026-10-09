@@ -33,25 +33,32 @@ template $LiaWindow: Adw.ApplicationWindow {
       // ── Tab strip ──────────────────────────────────────────────────────
       [top]
       Adw.HeaderBar header_bar {
-        title-widget: Adw.TabBar tab_bar {
-          view: tab_view;
-          autohide: false;
-          expand-tabs: false;
+        // The new-tab button follows the last tab, as in a browser: the
+        // tab bar takes its natural width and the box absorbs the rest.
+        title-widget: Box {
           hexpand: true;
 
-          styles [
-            "inline",
-          ]
+          Adw.TabBar tab_bar {
+            view: tab_view;
+            autohide: false;
+            expand-tabs: false;
+            hexpand: false;
 
-          end-action-widget: Button {
-            icon-name: "tab-new-symbolic";
+            styles [
+              "inline",
+            ]
+          }
+
+          Button {
+            icon-name: "list-add-symbolic";
             tooltip-text: _("New Tab (Ctrl+T)");
             action-name: "win.new-tab";
+            valign: center;
 
             styles [
               "flat",
             ]
-          };
+          }
         };
 
         [start]

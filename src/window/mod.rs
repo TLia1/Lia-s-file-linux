@@ -28,6 +28,7 @@ use crate::widgets::file_view::{self, ViewMode};
 use crate::widgets::folder_pane::{self, FolderPane};
 use crate::widgets::operations_popover::OperationsButton;
 use crate::widgets::sidebar::Sidebar;
+use crate::widgets::tab_strip_layout::TabStripLayout;
 
 /// Pane width limits (pixels), matching the GSettings ranges.
 const SIDEBAR_WIDTH: (f64, f64) = (180.0, 360.0);
@@ -131,6 +132,7 @@ mod imp {
             self.parent_constructed();
             let obj = self.obj();
             obj.setup_tabs();
+            obj.setup_tab_strip();
             obj.setup_shared_widgets();
             obj.setup_sidebar();
             obj.setup_details_pane();
@@ -245,6 +247,13 @@ impl Window {
     }
 
     // ── Tabs ───────────────────────────────────────────────────────────────
+
+    /// Puts the new-tab button right after the last tab, as in a browser.
+    fn setup_tab_strip(&self) {
+        if let Some(strip) = self.imp().tab_bar.parent() {
+            strip.set_layout_manager(Some(TabStripLayout::default()));
+        }
+    }
 
     fn setup_tabs(&self) {
         let tab_view = &self.imp().tab_view;

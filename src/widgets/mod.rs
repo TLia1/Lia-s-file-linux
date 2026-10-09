@@ -6,5 +6,6 @@ pub mod file_view;
 pub mod folder_pane;
 pub mod operations_popover;
 pub mod sidebar;
+pub mod tab_strip_layout;
 pub mod this_pc;
 pub mod thumbnail_image;
