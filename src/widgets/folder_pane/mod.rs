@@ -760,7 +760,15 @@ impl FolderPane {
     /// Opens folders in place and files with their default application
     /// (or an app chooser when `choose_app` is set).
     pub fn open_item(&self, item: &FileItem, choose_app: bool) {
-        if let Some(target) = item.target_uri() {
+        // Trashed items point at their real file, but folders are browsed
+        // within the trash (where deleting is permanent).
+        if dnd::is_trash(item.file()) {
+            if item.is_dir() && !choose_app {
+                self.navigate_to(item.file());
+            } else {
+                self.launch(&item.target_file(), choose_app);
+            }
+        } else if let Some(target) = item.target_uri() {
             self.navigate_to(&gio::File::for_uri(&target));
         } else if item.is_dir() && !choose_app {
             self.navigate_to(item.file());
@@ -774,6 +782,9 @@ impl FolderPane {
     pub fn folder_target(item: &FileItem) -> Option<gio::File> {
         if !item.is_dir() {
             return None;
+        }
+        if dnd::is_trash(item.file()) {
+            return Some(item.file().clone());
         }
         Some(
             item.target_uri()

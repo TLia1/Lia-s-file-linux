@@ -39,6 +39,8 @@ const SUMMARY_ATTRIBUTES: &str = "standard::display-name,standard::type,standard
                                   standard::content-type,time::modified,thumbnail::path";
 const TRASH_ATTRIBUTES: &str = "standard::name,trash::orig-path,trash::deletion-date";
 pub const TRASH_URI: &str = "trash:///";
+const TRASH_DELETE_ATTRIBUTES: &str = "standard::name,standard::display-name,standard::type,\
+                                       standard::size,standard::target-uri";
 
 const NOFOLLOW: gio::FileQueryInfoFlags = gio::FileQueryInfoFlags::NOFOLLOW_SYMLINKS;
 
@@ -986,7 +988,7 @@ impl Runner<'_> {
         let mut nodes = Vec::new();
         for file in files {
             self.check()?;
-            if let Some(node) = self.scan(file)? {
+            if let Some(node) = self.scan_deletable(file)? {
                 nodes.push(node);
             }
         }
@@ -1021,6 +1023,33 @@ impl Runner<'_> {
             items.push(enumerator.child(&info));
         }
         self.run_delete(&items)
+    }
+
+    /// Like `scan`, for deleting. GVfs only lets whole trashed items go
+    /// (it expunges folders with their contents) and refuses to touch
+    /// anything inside one: top-level trash items are deleted as they are,
+    /// deeper ones through their real file in the trash directory.
+    fn scan_deletable(&mut self, file: &gio::File) -> Step<Node> {
+        if file.uri_scheme().as_deref() != Some("trash") {
+            return self.scan(file);
+        }
+        let cancellable = self.control.cancellable().clone();
+        let Some(info) = self.attempt(file, || {
+            file.query_info(TRASH_DELETE_ATTRIBUTES, NOFOLLOW, Some(&cancellable))
+        })?
+        else {
+            return Ok(None);
+        };
+        let trash = gio::File::for_uri(TRASH_URI);
+        if file.parent().is_none_or(|parent| parent.equal(&trash)) {
+            let node = Node::from_info(file.clone(), &info);
+            self.count_scanned(&node);
+            return Ok(Some(node));
+        }
+        match trash_target(file, &info, &trash, &cancellable) {
+            Some(real) => self.scan(&real),
+            None => self.scan(file),
+        }
     }
 
     /// Deletes `file` and everything in it, after counting.
@@ -1214,6 +1243,32 @@ impl Runner<'_> {
 }
 
 /// `target`, or a numbered / "copy" variant of it that doesn't exist.
+/// The real file behind an item inside a trashed folder: its target URI,
+/// or else its path below the top-level item's target.
+fn trash_target(
+    file: &gio::File,
+    info: &gio::FileInfo,
+    trash: &gio::File,
+    cancellable: &gio::Cancellable,
+) -> Option<gio::File> {
+    if let Some(uri) = info.attribute_string(gio::FILE_ATTRIBUTE_STANDARD_TARGET_URI) {
+        return Some(gio::File::for_uri(&uri));
+    }
+    let mut top = file.clone();
+    while let Some(parent) = top.parent().filter(|p| !p.equal(trash)) {
+        top = parent;
+    }
+    let uri = top
+        .query_info(
+            gio::FILE_ATTRIBUTE_STANDARD_TARGET_URI,
+            NOFOLLOW,
+            Some(cancellable),
+        )
+        .ok()?
+        .attribute_string(gio::FILE_ATTRIBUTE_STANDARD_TARGET_URI)?;
+    Some(gio::File::for_uri(&uri).resolve_relative_path(top.relative_path(file)?))
+}
+
 fn unique_sibling(target: &gio::File, is_dir: bool, style: UniqueStyle) -> gio::File {
     let (Some(parent), Some(name)) = (target.parent(), target.basename()) else {
         return target.clone();
