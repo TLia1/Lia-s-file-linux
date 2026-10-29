@@ -176,6 +176,9 @@ mod imp {
             if let Some(menu) = self.menu.get() {
                 menu.unparent();
             }
+            while let Some(child) = self.obj().first_child() {
+                child.unparent();
+            }
             self.dispose_template();
         }
     }

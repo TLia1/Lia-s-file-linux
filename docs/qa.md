@@ -96,6 +96,9 @@ Unplug the mouse:
       (`ShowItemProperties` opens Properties; `ShowFolders` opens folders).
       Another running file manager may own the name: quit it first.
 
+- [ ] File/folder chooser portal: follow [File chooser integration](file-chooser.md),
+      including cancellation, simultaneous requests and GTK Save As.
+
 ## Release
 
 1. Bump the version in `Cargo.toml` and `meson.build`, and add a

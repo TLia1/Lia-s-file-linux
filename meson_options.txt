@@ -11,3 +11,15 @@ option(
   value: true,
   description: 'Install a D-Bus service file that starts Lia Files for org.freedesktop.FileManager1 calls',
 )
+option(
+  'file-chooser-portal',
+  type: 'boolean',
+  value: true,
+  description: 'Install the host file chooser portal (requires xdg-desktop-portal-gtk for save dialogs)',
+)
+option(
+  'portal-dir',
+  type: 'string',
+  value: '',
+  description: 'Portal descriptor directory (auto-detected from xdg-desktop-portal by default)',
+)

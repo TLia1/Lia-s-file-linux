@@ -73,3 +73,26 @@ if appstreamcli.found()
     args: ['validate', '--no-net', '--explain', metainfo_file],
   )
 endif
+
+# A host service: sandboxed copies cannot implement the desktop file chooser.
+if get_option('file-chooser-portal')
+  portal_conf = configuration_data()
+  portal_conf.set('bindir', bindir)
+  configure_file(
+    input: 'org.freedesktop.impl.portal.desktop.lia.service.in',
+    output: 'org.freedesktop.impl.portal.desktop.lia.service',
+    configuration: portal_conf,
+    install: true,
+    install_dir: datadir / 'dbus-1' / 'services',
+  )
+  portal_dir = get_option('portal-dir')
+  if portal_dir == ''
+    portal_dependency = dependency('xdg-desktop-portal', required: false)
+    portal_datadir = datadir
+    if portal_dependency.found()
+      portal_datadir = portal_dependency.get_variable(pkgconfig: 'datadir', default_value: datadir)
+    endif
+    portal_dir = portal_datadir / 'xdg-desktop-portal' / 'portals'
+  endif
+  install_data('lia.portal', install_dir: portal_dir)
+endif

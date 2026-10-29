@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=org.freedesktop.impl.portal.desktop.lia
+Exec=@bindir@/lia-files --file-chooser-portal

@@ -101,6 +101,7 @@ mod imp {
         /// The folder shown: the target of drops on the background.
         pub(super) location: RefCell<Option<gio::File>>,
         pub(super) accepts_drops: Cell<bool>,
+        pub(super) picker: Cell<bool>,
         pub(super) trash_mode: Cell<bool>,
         pub(super) cells: RefCell<Vec<BoundCell>>,
         pub(super) clipboard_handler: RefCell<Option<glib::SignalHandlerId>>,
@@ -384,6 +385,10 @@ impl FileView {
     /// writable).
     pub fn set_accepts_drops(&self, accepts: bool) {
         self.imp().accepts_drops.set(accepts);
+    }
+
+    pub fn set_picker_mode(&self) {
+        self.imp().picker.set(true);
     }
 
     /// The trash shows where items came from and when they were deleted,
@@ -998,6 +1003,9 @@ impl FileView {
     }
 
     fn popup_menu(&self, model: &gio::Menu, relative_to: &gtk::Widget, x: f64, y: f64) {
+        if self.imp().picker.get() {
+            return;
+        }
         let group = gio::SimpleActionGroup::new();
         let selected: Vec<_> = self
             .selected_items()

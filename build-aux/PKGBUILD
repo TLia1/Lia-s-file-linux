@@ -26,6 +26,8 @@ checkdepends=(
   desktop-file-utils
 )
 optdepends=(
+  'xdg-desktop-portal: file and folder picker integration'
+  'xdg-desktop-portal-gtk: save dialogs when using the Lia picker'
   'gvfs: trash, recent files and network locations'
   'gvfs-mtp: phones and media players'
   'gvfs-smb: Windows shares'

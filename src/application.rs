@@ -385,7 +385,7 @@ fn recover_interrupted_operations() {
 }
 
 /// Applies the `color-scheme` setting, now and when it changes.
-fn follow_color_scheme() {
+pub(crate) fn follow_color_scheme() {
     let apply = |settings: &gio::Settings| {
         let scheme = match settings.string("color-scheme").as_str() {
             "light" => adw::ColorScheme::ForceLight,
@@ -404,7 +404,7 @@ fn follow_color_scheme() {
 /// so the top pixel row of many glyphs is cut off. Manual rendering with
 /// hinted metrics keeps the two consistent while still following the user's
 /// hinting and antialiasing preferences.
-fn fix_font_rendering() {
+pub(crate) fn fix_font_rendering() {
     let Some(settings) = gtk::Settings::default() else {
         return;
     };

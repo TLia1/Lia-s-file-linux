@@ -42,3 +42,5 @@ src/services/file_ops/engine.rs
 src/services/file_ops/naming.rs
 src/widgets/address_bar/crumbs_box.rs
 src/widgets/operations_popover/mod.rs
+
+src/services/file_chooser/picker.rs

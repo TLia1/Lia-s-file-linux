@@ -16,6 +16,10 @@ GTK 4 and libadwaita.
 To make it the default file manager:
 `xdg-mime default io.github.lia.Files.desktop inode/directory`.
 
+To use Lia Files for other apps' **Choose File** and **Select Folder** dialogs,
+install the native file chooser portal and select `lia` in your portal settings.
+See [File chooser integration](docs/file-chooser.md) for setup, rollback and tests.
+
 ## Build from source
 
 Needs Rust ≥ 1.88, GTK ≥ 4.20, libadwaita ≥ 1.8, GtkSourceView 5,

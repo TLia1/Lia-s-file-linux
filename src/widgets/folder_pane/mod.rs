@@ -45,6 +45,8 @@ const SELECT_TIMEOUT: Duration = Duration::from_secs(3);
 /// State read by the filter closure.
 #[derive(Default)]
 struct FilterState {
+    directories_only: Cell<bool>,
+    file_filter: RefCell<Option<gtk::FileFilter>>,
     show_hidden: Cell<bool>,
     /// Lower-cased search text.
     query: RefCell<String>,
@@ -55,6 +57,16 @@ struct FilterState {
 
 impl FilterState {
     fn matches(&self, item: &FileItem) -> bool {
+        if !item.is_dir()
+            && (self.directories_only.get()
+                || self
+                    .file_filter
+                    .borrow()
+                    .as_ref()
+                    .is_some_and(|f| !f.match_(item.info())))
+        {
+            return false;
+        }
         if !self.show_hidden.get() && item.is_hidden() {
             return false;
         }
@@ -175,6 +187,8 @@ mod imp {
         pub(super) pending_timeout: RefCell<Option<glib::SourceId>>,
         /// Applying a folder's view settings: changes aren't remembered.
         pub(super) restoring_view: Cell<bool>,
+        pub(super) picker: Cell<bool>,
+        pub(super) picker_multiple: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -208,6 +222,9 @@ mod imp {
                     glib::subclass::Signal::builder("selection-changed").build(),
                     // The view mode or grouping changed.
                     glib::subclass::Signal::builder("view-changed").build(),
+                    glib::subclass::Signal::builder("file-picked")
+                        .param_types([gio::File::static_type()])
+                        .build(),
                 ]
             })
         }
@@ -239,6 +256,9 @@ mod imp {
                 timeout.remove();
             }
             self.directory.stop();
+            while let Some(child) = self.obj().first_child() {
+                child.unparent();
+            }
             self.dispose_template();
         }
     }
@@ -345,7 +365,14 @@ impl FolderPane {
         selection.connect_selection_changed(clone!(
             #[weak(rename_to = pane)]
             self,
-            move |_, _, _| {
+            move |selection, position, _| {
+                if pane.imp().picker.get()
+                    && !pane.imp().picker_multiple.get()
+                    && selection.selection().size() > 1
+                {
+                    selection.select_item(position, true);
+                    return;
+                }
                 pane.update_status();
                 pane.emit_by_name::<()>("selection-changed", &[]);
             }
@@ -760,6 +787,14 @@ impl FolderPane {
     /// Opens folders in place and files with their default application
     /// (or an app chooser when `choose_app` is set).
     pub fn open_item(&self, item: &FileItem, choose_app: bool) {
+        if self.imp().picker.get() {
+            if let Some(folder) = Self::folder_target(item) {
+                self.navigate_to(&folder);
+            } else {
+                self.emit_by_name::<()>("file-picked", &[&item.target_file()]);
+            }
+            return;
+        }
         // Trashed items point at their real file, but folders are browsed
         // within the trash (where deleting is permanent).
         if dnd::is_trash(item.file()) {
@@ -1161,8 +1196,9 @@ impl FolderPane {
     /// trash), but not on search results: they come from many folders.
     fn update_accepts_drops(&self) {
         let imp = self.imp();
-        imp.file_view
-            .set_accepts_drops((imp.writable.get() || imp.is_trash.get()) && !imp.recursive.get());
+        imp.file_view.set_accepts_drops(
+            !imp.picker.get() && (imp.writable.get() || imp.is_trash.get()) && !imp.recursive.get(),
+        );
     }
 
     // ── View options ───────────────────────────────────────────────────────
@@ -1342,7 +1378,7 @@ impl FolderPane {
         let _ = settings().set_int("icon-size", DEFAULT_ICON_SIZE);
     }
 
-    fn set_show_hidden(&self, show: bool) {
+    pub fn set_show_hidden(&self, show: bool) {
         let imp = self.imp();
         imp.filter_state.show_hidden.set(show);
         // The search skipped hidden folders: search again.
@@ -1354,6 +1390,40 @@ impl FolderPane {
         } else {
             gtk::FilterChange::MoreStrict
         });
+    }
+
+    /// Picker panes browse normally but return files instead of launching apps.
+    pub fn set_picker_mode(&self, directories: bool, multiple: bool) {
+        self.imp().file_view.set_picker_mode();
+        self.imp().picker.set(true);
+        self.imp().picker_multiple.set(multiple);
+        self.imp().filter_state.directories_only.set(directories);
+        self.imp().file_view.set_accepts_drops(false);
+        self.imp()
+            .filter
+            .get()
+            .unwrap()
+            .changed(gtk::FilterChange::Different);
+    }
+
+    pub fn set_picker_filter(&self, filter: Option<gtk::FileFilter>) {
+        self.imp().filter_state.file_filter.replace(filter);
+        self.imp()
+            .filter
+            .get()
+            .unwrap()
+            .changed(gtk::FilterChange::Different);
+    }
+
+    pub fn connect_file_picked<F: Fn(&Self, &gio::File) + 'static>(
+        &self,
+        f: F,
+    ) -> glib::SignalHandlerId {
+        self.connect_closure(
+            "file-picked",
+            false,
+            glib::closure_local!(move |pane: &Self, file: &gio::File| f(pane, file)),
+        )
     }
 
     fn apply_search_text(&self) {

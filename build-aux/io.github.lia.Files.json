@@ -52,7 +52,8 @@
             "buildsystem": "meson",
             "config-opts": [
                 "-Dprofile=release",
-                "-Dfile-manager-dbus-service=false"
+                "-Dfile-manager-dbus-service=false",
+                "-Dfile-chooser-portal=false"
             ],
             "sources": [
                 {
