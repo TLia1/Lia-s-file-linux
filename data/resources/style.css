@@ -2,6 +2,44 @@
  * Only libadwaita named colours are used, so light/dark/accent changes are
  * automatic. Spacing follows a 4 px grid. */
 
+/* Public theme tokens. User CSS in $XDG_CONFIG_HOME/lia-files overrides these. */
+:root {
+  --lia-radius-small: 4px;
+  --lia-radius: 6px;
+  --lia-radius-large: 8px;
+  --lia-radius-popover: 12px;
+  --lia-radius-chip: 14px;
+  --lia-radius-bar: 2px;
+  --lia-radius-drive-bar: 3px;
+  --lia-row-height: 32px;
+  --lia-control-height: 32px;
+  --lia-cell-padding: 12px;
+  --lia-hover-bg: color-mix(in srgb, var(--accent-bg-color) 6%, transparent);
+  --lia-selected-bg: color-mix(in srgb, var(--accent-bg-color) 15%, transparent);
+  --lia-selected-hover-bg: color-mix(in srgb, var(--accent-bg-color) 20%, transparent);
+  --lia-selection-marker: 3px;
+  --lia-selection-outline: 0px;
+  --lia-window-opacity: 1;
+  --lia-view-opacity: 1;
+  --lia-fast: 150ms;
+  --lia-normal: 200ms;
+  --lia-slow: 600ms;
+}
+
+/* Keep text and thumbnails opaque; only the surface paints with alpha. */
+window.lia-window {
+  background-color: alpha(var(--window-bg-color), var(--lia-window-opacity));
+}
+window.lia-window headerbar,
+window.lia-window toolbarview > top-bar,
+window.lia-window toolbarview > bottom-bar,
+window.lia-window overlay-split-view > sidebar,
+window.lia-window lia-sidebar,
+window.lia-window .nav-row,
+window.lia-window .command-bar {
+  background: none;
+}
+
 /* ── Navigation row (back/forward/up, address bar, search) ───────────────── */
 
 .nav-row {
@@ -12,20 +50,20 @@
 .nav-row > button,
 .nav-row > .linked > button {
   min-width: 32px;
-  min-height: 32px;
+  min-height: var(--lia-control-height);
   padding: 0;
-  border-radius: 6px;
+  border-radius: var(--lia-radius);
 }
 
 .nav-row > searchentry {
-  min-height: 32px;
-  border-radius: 6px;
+  min-height: var(--lia-control-height);
+  border-radius: var(--lia-radius);
 }
 
 /* ── Tab strip ───────────────────────────────────────────────────────────── */
 
 tabbar.inline tab {
-  border-radius: 6px;
+  border-radius: var(--lia-radius);
   min-height: 30px;
 }
 
@@ -39,9 +77,9 @@ tabbar.inline tab {
 .command-bar > button,
 .command-bar > menubutton > button {
   min-width: 32px;
-  min-height: 32px;
+  min-height: var(--lia-control-height);
   padding: 0 8px;
-  border-radius: 6px;
+  border-radius: var(--lia-radius);
 }
 
 .command-bar > button {
@@ -59,8 +97,8 @@ tabbar.inline tab {
 /* ── Address bar / breadcrumbs ───────────────────────────────────────────── */
 
 .address-bar {
-  min-height: 32px;
-  border-radius: 6px;
+  min-height: var(--lia-control-height);
+  border-radius: var(--lia-radius);
   background-color: alpha(currentColor, 0.08);
   padding: 0 2px;
 }
@@ -70,15 +108,15 @@ tabbar.inline tab {
 }
 
 .address-bar entry {
-  min-height: 32px;
-  border-radius: 6px;
+  min-height: var(--lia-control-height);
+  border-radius: var(--lia-radius);
 }
 
 breadcrumbs button.crumb {
   min-height: 28px;
   padding: 0 8px;
   margin: 2px 0;
-  border-radius: 6px;
+  border-radius: var(--lia-radius);
   font-weight: normal;
 }
 
@@ -94,7 +132,7 @@ breadcrumbs .crumb-separator {
 /* ── File area ───────────────────────────────────────────────────────────── */
 
 .file-view {
-  background-color: var(--view-bg-color);
+  background-color: alpha(var(--view-bg-color), var(--lia-view-opacity));
 }
 
 /* Details view: subtle headers, no grid lines, no zebra stripes */
@@ -121,30 +159,30 @@ columnview.details-view > listview {
 }
 
 columnview.details-view > listview > row {
-  min-height: 32px;
-  border-radius: 6px;
+  min-height: var(--lia-row-height);
+  border-radius: var(--lia-radius);
   padding: 0;
-  transition: background-color 150ms ease-out;
+  transition: background-color var(--lia-fast) ease-out;
 }
 
 columnview.details-view > listview > row > cell {
-  padding: 0 12px;
+  padding: 0 var(--lia-cell-padding);
 }
 
 /* Hover: accent at 6 %. Selection: accent at 15 % + 3 px pill on the left. */
 columnview.details-view > listview > row:hover,
 gridview.grid-view > child:hover {
-  background-color: alpha(var(--accent-bg-color), 0.06);
+  background-color: var(--lia-hover-bg);
 }
 
 columnview.details-view > listview > row:selected {
-  background-color: alpha(var(--accent-bg-color), 0.15);
+  background-color: var(--lia-selected-bg);
   color: inherit;
-  box-shadow: inset 3px 0 0 0 var(--accent-bg-color);
+  box-shadow: inset var(--lia-selection-marker) 0 0 0 var(--accent-bg-color);
 }
 
 columnview.details-view > listview > row:selected:hover {
-  background-color: alpha(var(--accent-bg-color), 0.20);
+  background-color: var(--lia-selected-hover-bg);
 }
 
 columnview.details-view > listview:focus-visible > row:focus-visible,
@@ -190,7 +228,7 @@ list.rename-preview label.error {
 /* Quick Look */
 .quick-look textview,
 .quick-look textview text {
-  background-color: var(--view-bg-color);
+  background-color: alpha(var(--view-bg-color), var(--lia-view-opacity));
 }
 
 /* Secondary text (dates, types, sizes). Don't restyle libadwaita's
@@ -211,19 +249,19 @@ gridview.grid-view {
 }
 
 gridview.grid-view > child {
-  border-radius: 8px;
+  border-radius: var(--lia-radius-large);
   padding: 8px 4px;
   margin: 2px;
-  transition: background-color 150ms ease-out;
+  transition: background-color var(--lia-fast) ease-out;
 }
 
 gridview.grid-view > child:selected {
-  background-color: alpha(var(--accent-bg-color), 0.15);
+  background-color: var(--lia-selected-bg);
   color: inherit;
 }
 
 gridview.grid-view > child:selected:hover {
-  background-color: alpha(var(--accent-bg-color), 0.20);
+  background-color: var(--lia-selected-hover-bg);
 }
 
 /* ── Sidebar (navigation pane) ───────────────────────────────────────────── */
@@ -234,29 +272,29 @@ lia-sidebar .navigation-sidebar {
 }
 
 lia-sidebar .navigation-sidebar > row {
-  min-height: 32px;
+  min-height: var(--lia-row-height);
   padding: 0 8px 0 12px;
-  border-radius: 6px;
+  border-radius: var(--lia-radius);
   margin: 1px 4px;
-  transition: background-color 150ms ease-out;
+  transition: background-color var(--lia-fast) ease-out;
 }
 
 lia-sidebar .navigation-sidebar > row:hover {
-  background-color: alpha(var(--accent-bg-color), 0.06);
+  background-color: var(--lia-hover-bg);
 }
 
 lia-sidebar .navigation-sidebar > row:selected {
-  background-color: alpha(var(--accent-bg-color), 0.15);
+  background-color: var(--lia-selected-bg);
   color: inherit;
-  box-shadow: inset 3px 0 0 0 var(--accent-bg-color);
+  box-shadow: inset var(--lia-selection-marker) 0 0 0 var(--accent-bg-color);
 }
 
 lia-sidebar .navigation-sidebar > row:selected:hover {
-  background-color: alpha(var(--accent-bg-color), 0.20);
+  background-color: var(--lia-selected-hover-bg);
 }
 
 lia-sidebar .navigation-sidebar > row:dir(rtl):selected {
-  box-shadow: inset -3px 0 0 0 var(--accent-bg-color);
+  box-shadow: inset calc(-1 * var(--lia-selection-marker)) 0 0 0 var(--accent-bg-color);
 }
 
 .sidebar-heading {
@@ -271,7 +309,7 @@ lia-sidebar button.sidebar-heading-button {
   padding: 4px 12px;
   margin: 10px 4px 0 4px;
   min-height: 0;
-  border-radius: 6px;
+  border-radius: var(--lia-radius);
 }
 
 lia-sidebar button.sidebar-heading-button:hover {
@@ -291,14 +329,14 @@ lia-sidebar button.eject-button {
 /* Drive usage: accent colour, red when (nearly) full */
 levelbar.usage-bar trough {
   min-height: 4px;
-  border-radius: 2px;
+  border-radius: var(--lia-radius-bar);
   background-color: alpha(currentColor, 0.12);
   padding: 0;
 }
 
 levelbar.usage-bar block {
   min-height: 4px;
-  border-radius: 2px;
+  border-radius: var(--lia-radius-bar);
 }
 
 levelbar.usage-bar block.usage-normal {
@@ -315,7 +353,7 @@ levelbar.usage-bar block.empty {
 
 /* Resize handle on the sidebar's edge: invisible until hovered */
 .sidebar-handle {
-  transition: background-color 150ms ease-out;
+  transition: background-color var(--lia-fast) ease-out;
 }
 
 .sidebar-handle:hover {
@@ -339,21 +377,21 @@ levelbar.usage-bar block.empty {
   min-width: 26px;
   min-height: 22px;
   padding: 0 4px;
-  border-radius: 4px;
+  border-radius: var(--lia-radius-small);
 }
 
 /* ── File operations ─────────────────────────────────────────────────────── */
 
 operations-button menubutton > button {
   min-width: 32px;
-  min-height: 32px;
+  min-height: var(--lia-control-height);
   padding: 0;
-  border-radius: 6px;
+  border-radius: var(--lia-radius);
 }
 
 popover.operations-popover > contents {
   padding: 6px;
-  border-radius: 12px;
+  border-radius: var(--lia-radius-popover);
 }
 
 .operations-title {
@@ -366,8 +404,8 @@ list.operations-list {
 
 list.operations-list > row.job-row {
   padding: 8px 10px;
-  border-radius: 8px;
-  transition: opacity 600ms ease-out;
+  border-radius: var(--lia-radius-large);
+  transition: opacity var(--lia-slow) ease-out;
 }
 
 list.operations-list > row.job-row:hover {
@@ -386,7 +424,7 @@ list.operations-list > row.job-row.failed label.caption {
 progressbar.job-progress > trough,
 progressbar.job-progress > trough > progress {
   min-height: 4px;
-  border-radius: 2px;
+  border-radius: var(--lia-radius-bar);
 }
 
 /* Conflict dialog: the two versions side by side */
@@ -406,13 +444,13 @@ thumbnail-image > image.thumbnail {
 }
 
 thumbnail-image > image.fade-in {
-  animation: thumbnail-fade-in 200ms ease-out;
+  animation: thumbnail-fade-in var(--lia-normal) ease-out;
 }
 
 /* ── Details pane ────────────────────────────────────────────────────────── */
 
 lia-details-pane {
-  background-color: var(--sidebar-bg-color);
+  background-color: alpha(var(--sidebar-bg-color), var(--lia-view-opacity));
 }
 
 lia-details-pane .title-4 {
@@ -420,8 +458,8 @@ lia-details-pane .title-4 {
 }
 
 scrolledwindow.text-preview {
-  border-radius: 8px;
-  background-color: var(--view-bg-color);
+  border-radius: var(--lia-radius-large);
+  background-color: alpha(var(--view-bg-color), var(--lia-view-opacity));
   box-shadow: 0 0 0 1px alpha(currentColor, 0.1);
 }
 
@@ -440,7 +478,7 @@ list.details-properties > row.property {
   /* Same height whichever controls are shown */
   min-height: 38px;
   border-spacing: 4px;
-  background-color: var(--view-bg-color);
+  background-color: alpha(var(--view-bg-color), var(--lia-view-opacity));
   box-shadow: inset 0 -1px alpha(currentColor, 0.08);
 }
 
@@ -451,18 +489,18 @@ list.details-properties > row.property {
 .search-bar > button,
 .search-bar > menubutton > button {
   min-height: 28px;
-  border-radius: 6px;
+  border-radius: var(--lia-radius);
 }
 
 /* Chips: pill shaped, accent tinted once a value is chosen */
 .search-bar > menubutton.filter-chip > button {
-  border-radius: 14px;
+  border-radius: var(--lia-radius-chip);
   padding: 0 10px;
   box-shadow: inset 0 0 0 1px alpha(currentColor, 0.15);
 }
 
 .search-bar > menubutton.filter-chip.active > button {
-  background-color: alpha(var(--accent-bg-color), 0.15);
+  background-color: var(--lia-selected-bg);
   box-shadow: inset 0 0 0 1px alpha(var(--accent-bg-color), 0.5);
 }
 
@@ -473,7 +511,7 @@ list.details-properties > row.property {
 /* ── This PC (drive cards) ───────────────────────────────────────────────── */
 
 this-pc {
-  background-color: var(--view-bg-color);
+  background-color: alpha(var(--view-bg-color), var(--lia-view-opacity));
 }
 
 .this-pc-heading {
@@ -483,24 +521,24 @@ this-pc {
 
 this-pc flowboxchild {
   padding: 0;
-  border-radius: 8px;
+  border-radius: var(--lia-radius-large);
 }
 
 this-pc .drive-card {
   min-width: 240px;
   padding: 12px 14px;
-  border-radius: 8px;
-  transition: background-color 150ms ease-out, box-shadow 150ms ease-out;
+  border-radius: var(--lia-radius-large);
+  transition: background-color var(--lia-fast) ease-out, box-shadow var(--lia-fast) ease-out;
 }
 
 this-pc flowboxchild:hover .drive-card {
-  background-image: linear-gradient(alpha(var(--accent-bg-color), 0.06),
-                                    alpha(var(--accent-bg-color), 0.06));
+  background-image: linear-gradient(var(--lia-hover-bg),
+                                    var(--lia-hover-bg));
 }
 
 this-pc flowboxchild:active .drive-card {
-  background-image: linear-gradient(alpha(var(--accent-bg-color), 0.15),
-                                    alpha(var(--accent-bg-color), 0.15));
+  background-image: linear-gradient(var(--lia-selected-bg),
+                                    var(--lia-selected-bg));
 }
 
 this-pc flowboxchild:focus-visible {
@@ -511,5 +549,12 @@ this-pc flowboxchild:focus-visible {
 this-pc .drive-card levelbar.usage-bar trough,
 this-pc .drive-card levelbar.usage-bar block {
   min-height: 6px;
-  border-radius: 3px;
+  border-radius: var(--lia-radius-drive-bar);
+}
+
+columnview.details-view > listview > row:selected,
+gridview.grid-view > child:selected,
+lia-sidebar .navigation-sidebar > row:selected {
+  outline: var(--lia-selection-outline) solid var(--accent-bg-color);
+  outline-offset: -2px;
 }

@@ -116,16 +116,6 @@ pub fn present(pane: &FolderPane) {
 
     let buffer = sourceview5::Buffer::new(None::<&gtk::TextTagTable>);
     buffer.set_highlight_matching_brackets(false);
-    let scheme = if adw::StyleManager::default().is_dark() {
-        "Adwaita-dark"
-    } else {
-        "Adwaita"
-    };
-    buffer.set_style_scheme(
-        sourceview5::StyleSchemeManager::default()
-            .scheme(scheme)
-            .as_ref(),
-    );
     let text = sourceview5::View::builder()
         .buffer(&buffer)
         .editable(false)
@@ -137,6 +127,7 @@ pub fn present(pane: &FolderPane) {
         .left_margin(8)
         .right_margin(8)
         .build();
+    crate::util::appearance::follow_text_style(&text);
     let text_scroller = gtk::ScrolledWindow::builder().child(&text).build();
 
     let stack = gtk::Stack::builder()

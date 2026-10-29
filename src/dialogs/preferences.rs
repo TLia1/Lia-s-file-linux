@@ -31,6 +31,72 @@ pub fn present(parent: Option<&impl IsA<gtk::Widget>>) {
         ],
     ));
 
+    appearance.add(&choice_row(
+        &settings,
+        "corners",
+        &gettext("Corners"),
+        None,
+        &[("rounded", gettext("Rounded")), ("sharp", gettext("Sharp"))],
+    ));
+    appearance.add(&choice_row(
+        &settings,
+        "density",
+        &gettext("Density"),
+        None,
+        &[
+            ("compact", gettext("Compact")),
+            ("normal", gettext("Normal")),
+            ("comfortable", gettext("Comfortable")),
+        ],
+    ));
+    appearance.add(&choice_row(
+        &settings,
+        "selection-style",
+        &gettext("Selection"),
+        None,
+        &[
+            ("marker", gettext("Marker")),
+            ("fill", gettext("Fill")),
+            ("outline", gettext("Outline")),
+        ],
+    ));
+    let opacity = adw::SpinRow::with_range(0.6, 1.0, 0.02);
+    opacity.set_title(&gettext("Window Opacity"));
+    opacity.set_digits(2);
+    settings.bind("window-opacity", &opacity, "value").build();
+    appearance.add(&opacity);
+    let accent = adw::EntryRow::builder()
+        .title(gettext("Accent Colour (#rrggbb, empty for system)"))
+        .build();
+    settings
+        .bind("accent-override", &accent, "text")
+        .flags(gio::SettingsBindFlags::GET)
+        .build();
+    accent.connect_changed(clone!(
+        #[strong]
+        settings,
+        move |row| {
+            let value = row.text();
+            if value.is_empty() || crate::util::appearance::valid_accent(&value) {
+                row.remove_css_class("error");
+                if settings.string("accent-override") != value {
+                    let _ = settings.set_string("accent-override", &value);
+                }
+            } else {
+                row.add_css_class("error");
+            }
+        }
+    ));
+    appearance.add(&accent);
+    for (key, title) in [
+        ("text-scheme-dark", "Dark Preview Scheme"),
+        ("text-scheme-light", "Light Preview Scheme"),
+    ] {
+        let row = adw::EntryRow::builder().title(gettext(title)).build();
+        settings.bind(key, &row, "text").build();
+        appearance.add(&row);
+    }
+
     let behaviour = adw::PreferencesGroup::builder()
         .title(gettext("Behavior"))
         .build();

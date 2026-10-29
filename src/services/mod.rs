@@ -14,3 +14,5 @@ pub mod terminal;
 pub mod thumbnails;
 pub mod undo;
 pub mod volumes;
+
+pub mod custom_actions;

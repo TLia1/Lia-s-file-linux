@@ -14,6 +14,7 @@ use std::cell::{Cell, OnceCell, RefCell};
 use std::rc::Rc;
 use std::sync::OnceLock;
 
+use adw::prelude::{AdwDialogExt, AlertDialogExt};
 use gettextrs::gettext;
 use gtk::{gdk, gio, glib, glib::clone, prelude::*, subclass::prelude::*};
 
@@ -997,6 +998,55 @@ impl FileView {
     }
 
     fn popup_menu(&self, model: &gio::Menu, relative_to: &gtk::Widget, x: f64, y: f64) {
+        let group = gio::SimpleActionGroup::new();
+        let selected: Vec<_> = self
+            .selected_items()
+            .iter()
+            .map(|item| {
+                (
+                    item.target_file(),
+                    item.content_type().map(String::from).unwrap_or_default(),
+                )
+            })
+            .collect();
+        let section = gio::Menu::new();
+        if !self.imp().trash_mode.get() {
+            for (index, action) in crate::services::custom_actions::discover()
+                .into_iter()
+                .filter(|action| action.matches(&selected))
+                .enumerate()
+            {
+                let name = format!("action{index}");
+                let item = gio::MenuItem::new(Some(&action.name), Some(&format!("custom.{name}")));
+                if let Some(icon) = &action.icon {
+                    item.set_icon(&gio::ThemedIcon::new(icon));
+                }
+                section.append_item(&item);
+                let files: Vec<_> = selected.iter().map(|(file, _)| file.clone()).collect();
+                let activate = gio::SimpleAction::new(&name, None);
+                activate.connect_activate(clone!(
+                    #[weak(rename_to = view)]
+                    self,
+                    move |_, _| {
+                        let context = view.display().app_launch_context();
+                        if let Err(error) = action.launch(&files, Some(context.upcast_ref())) {
+                            tracing::warn!("custom action failed: {error}");
+                            let dialog = adw::AlertDialog::builder()
+                                .heading(gettext("Could Not Run Action"))
+                                .body(error.to_string())
+                                .build();
+                            dialog.add_response("close", &gettext("Close"));
+                            dialog.present(Some(&view));
+                        }
+                    }
+                ));
+                group.add_action(&activate);
+            }
+        }
+        self.insert_action_group("custom", Some(&group));
+        if section.n_items() > 0 {
+            model.append_section(None, &section);
+        }
         let menu = self.imp().context_menu.get().unwrap();
         let point = relative_to
             .compute_point(self, &gtk::graphene::Point::new(x as f32, y as f32))

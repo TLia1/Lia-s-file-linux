@@ -22,6 +22,8 @@ mod imp {
     pub struct Application {
         /// The session is restored only for the first window.
         pub(super) started: std::cell::Cell<bool>,
+        pub(super) appearance:
+            std::cell::OnceCell<std::rc::Rc<crate::util::appearance::Appearance>>,
     }
 
     #[glib::object_subclass]
@@ -39,6 +41,9 @@ mod imp {
             let app = self.obj();
             fix_font_rendering();
             follow_color_scheme();
+            self.appearance
+                .set(crate::util::appearance::Appearance::new())
+                .ok();
             recover_interrupted_operations();
             app.setup_actions();
             app.setup_accels();
@@ -288,6 +293,20 @@ impl Application {
                 })
                 .build(),
         ]);
+        if cfg!(debug_assertions) || std::env::var_os("GTK_DEBUG").is_some() {
+            let action = gio::SimpleAction::new("reload-style", None);
+            action.connect_activate(glib::clone!(
+                #[weak(rename_to = app)]
+                self,
+                move |_, _| {
+                    if let Some(appearance) = app.imp().appearance.get() {
+                        appearance.reload();
+                    }
+                }
+            ));
+            self.add_action(&action);
+            self.set_accels_for_action("app.reload-style", &["<Control><Shift>r"]);
+        }
         self.add_action(&settings().create_action("restore-session"));
         let undo = undo_manager();
         for (name, property) in [("undo", "can-undo"), ("redo", "can-redo")] {

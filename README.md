@@ -32,6 +32,12 @@ Flatpak: `flatpak-builder --user --install --force-clean _flatpak build-aux/io.g
 has the manual checklist and the release steps. [PLAN.md](PLAN.md) describes
 the design and architecture.
 
+## Themes
+
+Appearance preferences and watched user stylesheets let Lia Files follow desktop
+themes, including Penumbra. See [Themes and desktop integration](docs/themes.md)
+for tokens, text preview schemes, glass surfaces and custom context-menu actions.
+
 ## License
 
 GPL-3.0-or-later.

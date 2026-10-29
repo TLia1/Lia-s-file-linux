@@ -47,7 +47,6 @@ mod imp {
         pub(super) text_view: OnceCell<sourceview5::View>,
         pub(super) pane: glib::WeakRef<FolderPane>,
         pub(super) pane_handlers: RefCell<Vec<glib::SignalHandlerId>>,
-        pub(super) style_handler: RefCell<Option<glib::SignalHandlerId>>,
         /// What's shown: the folder and the selected items.
         pub(super) shown: RefCell<Option<(gio::File, Vec<FileItem>)>>,
         /// The folder's item count, kept up to date while it loads.
@@ -85,9 +84,6 @@ mod imp {
             let obj = self.obj();
             obj.set_folder_pane(None);
             obj.cancel_tasks();
-            if let Some(handler) = self.style_handler.take() {
-                adw::StyleManager::default().disconnect(handler);
-            }
             self.dispose_template();
         }
     }
@@ -382,28 +378,7 @@ impl DetailsPane {
         imp.text_scroller.set_child(Some(&view));
         imp.text_view.set(view).unwrap();
 
-        // Highlighting follows the light/dark style.
-        let style = adw::StyleManager::default();
-        let handler = style.connect_dark_notify(clone!(
-            #[weak(rename_to = details)]
-            self,
-            move |_| details.update_text_scheme()
-        ));
-        imp.style_handler.replace(Some(handler));
-        self.update_text_scheme();
-    }
-
-    fn update_text_scheme(&self) {
-        let Some(buffer) = self.text_buffer() else {
-            return;
-        };
-        let name = if adw::StyleManager::default().is_dark() {
-            "Adwaita-dark"
-        } else {
-            "Adwaita"
-        };
-        let scheme = sourceview5::StyleSchemeManager::default().scheme(name);
-        buffer.set_style_scheme(scheme.as_ref());
+        crate::util::appearance::follow_text_style(imp.text_view.get().unwrap());
     }
 
     fn text_buffer(&self) -> Option<sourceview5::Buffer> {

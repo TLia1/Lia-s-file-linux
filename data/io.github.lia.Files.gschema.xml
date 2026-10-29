@@ -36,6 +36,38 @@
       <summary>Light or dark style</summary>
       <description>“system” follows the desktop's preference.</description>
     </key>
+    <key name="corners" type="s">
+      <choices><choice value="rounded"/><choice value="sharp"/></choices>
+      <default>'rounded'</default>
+      <summary>Shape of corners</summary>
+    </key>
+    <key name="density" type="s">
+      <choices><choice value="compact"/><choice value="normal"/><choice value="comfortable"/></choices>
+      <default>'normal'</default>
+      <summary>Spacing of rows and controls</summary>
+    </key>
+    <key name="selection-style" type="s">
+      <choices><choice value="marker"/><choice value="fill"/><choice value="outline"/></choices>
+      <default>'marker'</default>
+      <summary>Appearance of selected files</summary>
+    </key>
+    <key name="window-opacity" type="d">
+      <range min="0.6" max="1.0"/>
+      <default>1.0</default>
+      <summary>Opacity of the window surface</summary>
+    </key>
+    <key name="accent-override" type="s">
+      <default>''</default>
+      <summary>Optional accent colour as #rrggbb</summary>
+    </key>
+    <key name="text-scheme-dark" type="s">
+      <default>'Adwaita-dark'</default>
+      <summary>GtkSourceView scheme for dark text previews</summary>
+    </key>
+    <key name="text-scheme-light" type="s">
+      <default>'Adwaita'</default>
+      <summary>GtkSourceView scheme for light text previews</summary>
+    </key>
     <key name="single-click" type="b">
       <default>false</default>
       <summary>Open items with a single click</summary>
