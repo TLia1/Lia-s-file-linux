@@ -286,74 +286,99 @@ fn portal_round_trip() {
                 .is_err()
         );
 
-        // A stand-in GTK backend verifies that saves preserve all options/results.
-        let gtk_connection = gio::DBusConnection::for_address_sync(
-            &std::env::var("DBUS_SESSION_BUS_ADDRESS").unwrap(),
-            gio::DBusConnectionFlags::AUTHENTICATION_CLIENT
-                | gio::DBusConnectionFlags::MESSAGE_BUS_CONNECTION,
-            None,
-            gio::Cancellable::NONE,
-        )
-        .unwrap();
-        gtk_connection
-            .call_future(
-                Some("org.freedesktop.DBus"),
-                "/org/freedesktop/DBus",
-                "org.freedesktop.DBus",
-                "RequestName",
-                Some(&(GTK_BACKEND, 0u32).to_variant()),
-                None,
-                gio::DBusCallFlags::NONE,
-                5000,
-            )
-            .await
-            .unwrap();
-        let info = gio::DBusNodeInfo::for_xml(&interface_xml())
+        // SaveFile returns the typed name in the current folder, even though
+        // it doesn't exist yet.
+        let mut options = base.clone();
+        options.insert("current_name".into(), "saved.txt".to_variant());
+        options.insert("filters".into(), vec![filter.clone()].to_variant());
+        let reply = call(&client, &destination, "/test/save", "SaveFile", options);
+        until(|| !app.windows().is_empty()).await;
+        let window = app.windows()[0].clone();
+        let pane = find::<FolderPane>(window.upcast_ref()).unwrap();
+        let name = find::<gtk::Entry>(window.upcast_ref()).unwrap();
+        assert_eq!(name.text(), "saved.txt");
+        until(|| !pane.loading()).await;
+        let button = window
+            .default_widget()
             .unwrap()
-            .lookup_interface(INTERFACE)
+            .downcast::<gtk::Button>()
             .unwrap();
-        let gtk_registration = gtk_connection
-            .register_object(OBJECT_PATH, &info)
-            .method_call(|_, _, _, _, method, params, invocation| {
-                assert!(matches!(method, "SaveFile" | "SaveFiles"));
-                let (_, _, _, _, options) = params
-                    .get::<(glib::variant::ObjectPath, String, String, String, Options)>()
-                    .unwrap();
-                assert_eq!(
-                    options["current_name"].get::<String>().unwrap(),
-                    "saved.txt"
-                );
-                invocation.return_value(Some(
-                    &(
-                        0u32,
-                        Options::from([(
-                            "uris".into(),
-                            vec!["file:///tmp/saved.txt"].to_variant(),
-                        )]),
-                    )
-                        .to_variant(),
-                ));
-            })
-            .build()
-            .unwrap();
-        for (method, handle) in [("SaveFile", "/test/save"), ("SaveFiles", "/test/saves")] {
-            let reply = call(
-                &client,
-                &destination,
-                handle,
-                method,
-                Options::from([("current_name".into(), "saved.txt".to_variant())]),
-            );
-            until(|| reply.borrow().is_some()).await;
-            let (code, values) = result(&reply);
-            assert_eq!(code, 0);
-            assert_eq!(
-                values["uris"].get::<Vec<String>>().unwrap(),
-                ["file:///tmp/saved.txt"]
-            );
-        }
-        gtk_connection.unregister_object(gtk_registration).unwrap();
-        gtk_connection.close_future().await.unwrap();
+        assert!(button.is_sensitive());
+        button.emit_clicked();
+        until(|| reply.borrow().is_some()).await;
+        let (code, values) = result(&reply);
+        assert_eq!(code, 0);
+        assert_eq!(
+            values["uris"].get::<Vec<String>>().unwrap(),
+            [gio::File::for_path(dir.path().join("saved.txt")).uri()]
+        );
+        assert_eq!(
+            values["current_filter"].get::<FileFilter>().unwrap(),
+            filter
+        );
+        assert!(app.windows().is_empty());
+
+        // Saving over an existing file asks first; activating it fills the name.
+        let reply = call(
+            &client,
+            &destination,
+            "/test/replace",
+            "SaveFile",
+            base.clone(),
+        );
+        until(|| !app.windows().is_empty()).await;
+        let window = app.windows()[0].clone();
+        let pane = find::<FolderPane>(window.upcast_ref()).unwrap();
+        until(|| !pane.loading()).await;
+        pane.select_files(vec![gio::File::for_path(&second)], false);
+        until(|| pane.n_selected() == 1).await;
+        let item = pane.selected_items()[0].clone();
+        pane.open_item(&item, false);
+        let mut dialog = None;
+        until(|| {
+            dialog = find::<adw::AlertDialog>(window.upcast_ref());
+            dialog.is_some()
+        })
+        .await;
+        assert!(reply.borrow().is_none());
+        dialog
+            .unwrap()
+            .emit_by_name::<()>("response", &[&"replace"]);
+        until(|| reply.borrow().is_some()).await;
+        let (code, values) = result(&reply);
+        assert_eq!(code, 0);
+        assert_eq!(
+            values["uris"].get::<Vec<String>>().unwrap(),
+            [gio::File::for_path(&second).uri()]
+        );
+
+        // SaveFiles picks a folder and keeps existing files by renaming.
+        let mut options = base.clone();
+        options.insert(
+            "files".into(),
+            vec![b"c.txt\0".to_vec(), b"new.txt\0".to_vec()].to_variant(),
+        );
+        let reply = call(&client, &destination, "/test/saves", "SaveFiles", options);
+        until(|| !app.windows().is_empty()).await;
+        let window = app.windows()[0].clone();
+        let pane = find::<FolderPane>(window.upcast_ref()).unwrap();
+        until(|| !pane.loading()).await;
+        window
+            .default_widget()
+            .unwrap()
+            .downcast::<gtk::Button>()
+            .unwrap()
+            .emit_clicked();
+        until(|| reply.borrow().is_some()).await;
+        let (code, values) = result(&reply);
+        assert_eq!(code, 0);
+        assert_eq!(
+            values["uris"].get::<Vec<String>>().unwrap(),
+            [
+                gio::File::for_path(dir.path().join("c (2).txt")).uri(),
+                gio::File::for_path(dir.path().join("new.txt")).uri(),
+            ]
+        );
 
         // Wrong option types fail cleanly without opening a window.
         let mut options = base;

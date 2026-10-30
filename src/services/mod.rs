@@ -4,6 +4,7 @@ pub mod archives;
 pub mod batch_rename;
 pub mod clipboard;
 pub mod disk_usage;
+pub mod executable;
 pub mod file_chooser;
 pub mod file_manager1;
 pub mod file_ops;

@@ -2599,3 +2599,67 @@ msgstr "Annuler"
 #: src/widgets/operations_popover/mod.rs:449
 msgid "Resume"
 msgstr "Reprendre"
+
+#: src/widgets/folder_pane/mod.rs
+msgid "“{}” Is Not Executable"
+msgstr "« {} » n’est pas exécutable"
+
+#: src/widgets/folder_pane/mod.rs
+msgid "Open Properties → Permissions and enable execution to run this file."
+msgstr "Ouvrez Propriétés → Permissions et autorisez l’exécution pour lancer ce fichier."
+
+#: src/widgets/folder_pane/mod.rs
+msgid "_Close"
+msgstr "_Fermer"
+
+#: src/widgets/folder_pane/mod.rs
+msgid "_Open With…"
+msgstr "_Ouvrir avec…"
+
+#: src/widgets/folder_pane/mod.rs
+msgid "Run “{}”?"
+msgstr "Exécuter « {} » ?"
+
+#: src/widgets/folder_pane/mod.rs
+msgid "Choose whether to run this script or open it in an app."
+msgstr "Choisissez d’exécuter ce script ou de l’ouvrir dans une application."
+
+#: src/widgets/folder_pane/mod.rs
+msgid "_Run"
+msgstr "_Exécuter"
+
+#: src/widgets/folder_pane/mod.rs
+msgid "Run in _Terminal"
+msgstr "Exécuter dans un _terminal"
+
+#: src/widgets/folder_pane/mod.rs
+msgid "Could not run “{}”: {}"
+msgstr "Impossible d’exécuter « {} » : {}"
+
+#: src/services/file_chooser/picker.rs
+msgid "_Save"
+msgstr "_Enregistrer"
+
+#: src/services/file_chooser/picker.rs
+msgid "A file with this name already exists. Saving will replace its contents."
+msgstr "Un fichier portant ce nom existe déjà. L’enregistrer remplacera son contenu."
+
+#: src/services/file_chooser/picker.rs
+msgid "You can't save files in this folder."
+msgstr "Vous ne pouvez pas enregistrer de fichiers dans ce dossier."
+
+#: src/services/file_chooser/mod.rs
+msgid "This location is not available as a local file."
+msgstr "Cet emplacement n’est pas disponible en tant que fichier local."
+
+#: src/services/file_chooser/mod.rs
+msgid "The folder is no longer available."
+msgstr "Le dossier n’est plus disponible."
+
+#: src/services/file_chooser/mod.rs
+msgid "Untitled"
+msgstr "Sans titre"
+
+#: src/services/file_chooser/picker.rs
+msgid "Select a folder."
+msgstr "Sélectionnez un dossier."

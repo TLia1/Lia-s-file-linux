@@ -1,5 +1,7 @@
 use gtk::{gio, prelude::*};
-use lia_files::services::file_chooser::{Options, folder_from_options, selection_uris};
+use lia_files::services::file_chooser::{
+    Options, folder_from_options, save_files_uris, save_uri, selection_uris,
+};
 use std::os::unix::ffi::{OsStrExt, OsStringExt};
 
 #[test]
@@ -59,4 +61,46 @@ fn symlink_selection_follows_target_kind() {
     let file = gio::File::for_path(link);
     assert!(selection_uris(std::slice::from_ref(&file), true, false).is_ok());
     assert!(selection_uris(&[file], false, false).is_err());
+}
+
+#[test]
+fn save_names_a_new_file_in_a_local_folder() {
+    let dir = tempfile::tempdir().unwrap();
+    let folder = gio::File::for_path(dir.path());
+    let uri = save_uri(&folder, "a # b.txt", false).unwrap();
+    assert!(uri.ends_with("a%20%23%20b.txt"));
+    assert!(save_uri(&folder, "", false).is_err());
+    assert!(save_uri(&folder, "a/b", false).is_err());
+    assert!(save_uri(&folder, "a:b", true).is_err());
+    assert!(save_uri(&gio::File::for_uri("smb://server/share"), "a", false).is_err());
+    assert!(save_uri(&folder.child("missing"), "a", false).is_err());
+}
+
+#[test]
+fn save_files_keeps_existing_files_and_names_empty_ones() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("a.txt"), "a").unwrap();
+    let folder = gio::File::for_path(dir.path());
+    let uri = |name: &str| gio::File::for_path(dir.path().join(name)).uri().to_string();
+    let uris = save_files_uris(
+        &folder,
+        &[
+            b"a.txt\0".to_vec(),
+            b"b.txt".to_vec(),
+            b"b.txt".to_vec(),
+            b"/etc/../c.txt".to_vec(),
+            Vec::new(),
+        ],
+    )
+    .unwrap();
+    assert_eq!(
+        uris,
+        [
+            uri("a (2).txt"),
+            uri("b.txt"),
+            uri("b (2).txt"),
+            uri("c.txt"),
+            uri("Untitled"),
+        ]
+    );
 }

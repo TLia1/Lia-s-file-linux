@@ -4,24 +4,67 @@ use adw::prelude::*;
 use gettextrs::gettext;
 use gtk::{gdk, gio, glib};
 
-use super::{Choice, FileFilter, Options, Request, folder_from_options, selection_uris};
+use super::{
+    Choice, FileFilter, Options, Request, current_file_from_options, folder_from_options,
+    save_files_uris, save_uri, selection_uris,
+};
+use crate::services::file_ops::naming;
 use crate::widgets::{address_bar::AddressBar, folder_pane::FolderPane, sidebar::Sidebar};
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) enum Mode {
+    /// OpenFile: existing files or folders.
+    Open,
+    /// SaveFile: a folder and a typed name.
+    Save,
+    /// SaveFiles: a folder that receives the suggested names.
+    SaveFiles,
+}
 
 pub(super) fn present(
     app: &adw::Application,
+    mode: Mode,
     title: &str,
     parent: &str,
     options: &Options,
     request: Rc<Request>,
 ) -> Result<adw::Window, &'static str> {
-    let directory = boolean(options, "directory", false)?;
-    let multiple = boolean(options, "multiple", false)?;
+    // SaveFiles chooses where the files go: the browser picks a folder.
+    let directory = match mode {
+        Mode::Open => boolean(options, "directory", false)?,
+        Mode::Save => false,
+        Mode::SaveFiles => true,
+    };
+    let multiple = mode == Mode::Open && boolean(options, "multiple", false)?;
     let modal = boolean(options, "modal", true)?;
-    let filters = option::<Vec<FileFilter>>(options, "filters")?.unwrap_or_default();
-    let current = option::<FileFilter>(options, "current_filter")?;
+    let filters = match mode {
+        Mode::SaveFiles => Vec::new(),
+        _ => option::<Vec<FileFilter>>(options, "filters")?.unwrap_or_default(),
+    };
+    let current = match mode {
+        Mode::SaveFiles => None,
+        _ => option::<FileFilter>(options, "current_filter")?,
+    };
     let choices = option::<Vec<Choice>>(options, "choices")?.unwrap_or_default();
-    let accept_label = option::<String>(options, "accept_label")?
-        .unwrap_or_else(|| gettext(if directory { "_Select Folder" } else { "_Open" }));
+    let current_file = match mode {
+        Mode::Save => current_file_from_options(options),
+        _ => None,
+    };
+    let current_name = match mode {
+        Mode::Save => option::<String>(options, "current_name")?,
+        _ => None,
+    };
+    let save_files = match mode {
+        Mode::SaveFiles => option::<Vec<Vec<u8>>>(options, "files")?.unwrap_or_default(),
+        _ => Vec::new(),
+    };
+    let accept_label = option::<String>(options, "accept_label")?.unwrap_or_else(|| {
+        gettext(match mode {
+            Mode::Open if directory => "_Select Folder",
+            Mode::Open => "_Open",
+            _ => "_Save",
+        })
+    });
     let mut filters = filters;
     if let Some(current) = &current
         && !filters.contains(current)
@@ -100,6 +143,26 @@ pub(super) fn present(
     let browser = gtk::Box::new(gtk::Orientation::Vertical, 8);
     browser.set_margin_start(12);
     browser.set_margin_end(12);
+    let name = gtk::Entry::builder()
+        .hexpand(true)
+        .activates_default(true)
+        .build();
+    if mode == Mode::Save {
+        let initial = current_file
+            .as_ref()
+            .and_then(|file| file.basename())
+            .map(|name| name.to_string_lossy().into_owned())
+            .or(current_name)
+            .unwrap_or_default();
+        name.set_text(&initial);
+        name.update_property(&[gtk::accessible::Property::Label(&gettext("Name"))]);
+        let row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+        let label = gtk::Label::with_mnemonic(&gettext("_Name"));
+        label.set_mnemonic_widget(Some(&name));
+        row.append(&label);
+        row.append(&name);
+        browser.append(&row);
+    }
     browser.append(&navigation);
     browser.append(&search);
     browser.append(&pane);
@@ -177,32 +240,81 @@ pub(super) fn present(
     window.set_content(Some(&content));
     window.set_default_widget(Some(&accept));
 
+    let finish: Rc<dyn Fn(Vec<String>)> = Rc::new(glib::clone!(
+        #[strong]
+        request,
+        move |uris: Vec<String>| {
+            let mut results = Options::new();
+            results.insert("uris".into(), uris.to_variant());
+            results.insert(
+                "choices".into(),
+                choice_values
+                    .iter()
+                    .map(|(id, value)| (id.clone(), value()))
+                    .collect::<Vec<_>>()
+                    .to_variant(),
+            );
+            if let Some(dropdown) = &filter_dropdown
+                && let Some(filter) = filters.get(dropdown.selected() as usize)
+            {
+                results.insert("current_filter".into(), filter.to_variant());
+            }
+            request.respond(0, results);
+        }
+    ));
     let submit: Rc<dyn Fn(Vec<gio::File>)> = Rc::new(glib::clone!(
         #[weak]
         error,
+        #[weak]
+        pane,
+        #[weak_allow_none]
+        name,
+        #[weak]
+        window,
         #[strong]
-        request,
+        finish,
         move |files: Vec<gio::File>| {
-            match selection_uris(&files, directory, multiple) {
-                Ok(uris) => {
-                    let mut results = Options::new();
-                    results.insert("uris".into(), uris.to_variant());
-                    results.insert(
-                        "choices".into(),
-                        choice_values
-                            .iter()
-                            .map(|(id, value)| (id.clone(), value()))
-                            .collect::<Vec<_>>()
-                            .to_variant(),
-                    );
-                    if let Some(dropdown) = &filter_dropdown
-                        && let Some(filter) = filters.get(dropdown.selected() as usize)
-                    {
-                        results.insert("current_filter".into(), filter.to_variant());
-                    }
-                    request.respond(0, results);
+            let result = match mode {
+                Mode::Open => {
+                    selection_uris(&files, directory, multiple).map_err(|message| gettext(message))
                 }
-                Err(message) => error.set_text(&gettext(message)),
+                Mode::SaveFiles => files
+                    .first()
+                    .ok_or_else(|| gettext("Select a folder."))
+                    .and_then(|folder| save_files_uris(folder, &save_files)),
+                Mode::Save => {
+                    let (Some(folder), Some(name)) = (pane.location(), &name) else {
+                        return;
+                    };
+                    let typed = name.text();
+                    let target = folder.child(typed.as_str());
+                    if !typed.is_empty()
+                        && !typed.contains('/')
+                        && target
+                            .query_file_type(gio::FileQueryInfoFlags::NONE, gio::Cancellable::NONE)
+                            == gio::FileType::Directory
+                    {
+                        // Like GTK: typing a folder's name opens it.
+                        name.set_text("");
+                        pane.navigate_to(&target);
+                        return;
+                    }
+                    if !pane.writable() {
+                        error.set_text(&gettext("You can't save files in this folder."));
+                        return;
+                    }
+                    match save_uri(&folder, &typed, pane.portable_names()) {
+                        Ok(uri) if target.query_exists(gio::Cancellable::NONE) => {
+                            confirm_replace(&window, &typed, finish.clone(), uri);
+                            return;
+                        }
+                        result => result.map(|uri| vec![uri]),
+                    }
+                }
+            };
+            match result {
+                Ok(uris) => finish(uris),
+                Err(message) => error.set_text(&message),
             }
         }
     ));
@@ -216,10 +328,20 @@ pub(super) fn present(
         }
     ));
     pane.connect_file_picked(glib::clone!(
+        #[weak_allow_none]
+        name,
         #[strong]
         submit,
         move |pane, file| {
-            if !directory {
+            if mode == Mode::Save
+                && let Some(name) = &name
+            {
+                // Activating a file saves over it, after confirmation.
+                if let Some(basename) = file.basename() {
+                    name.set_text(&basename.to_string_lossy());
+                }
+                submit(Vec::new());
+            } else if !directory {
                 submit(if multiple && pane.n_selected() > 1 {
                     pane.selected_files()
                 } else {
@@ -246,10 +368,15 @@ pub(super) fn present(
         accept,
         #[weak]
         error,
+        #[weak_allow_none]
+        name,
         move |pane: &FolderPane| {
             error.set_text("");
             let items = pane.selected_items();
-            let valid = if items.is_empty() {
+            let valid = if mode == Mode::Save {
+                name.is_some_and(|name| !name.text().is_empty())
+                    && pane.location().is_some_and(|f| f.path().is_some())
+            } else if items.is_empty() {
                 directory && pane.location().is_some_and(|f| f.path().is_some())
             } else {
                 (multiple || items.len() == 1)
@@ -270,6 +397,28 @@ pub(super) fn present(
         update,
         move |pane| update(pane)
     ));
+    if mode == Mode::Save {
+        // Choosing a file suggests its name, to save over it.
+        pane.connect_selection_changed(glib::clone!(
+            #[weak]
+            name,
+            move |pane| {
+                if let [item] = pane.selected_items().as_slice()
+                    && !item.is_dir()
+                    && let Some(basename) = item.target_file().basename()
+                {
+                    name.set_text(&basename.to_string_lossy());
+                }
+            }
+        ));
+        name.connect_changed(glib::clone!(
+            #[weak]
+            pane,
+            #[strong]
+            update,
+            move |_| update(&pane)
+        ));
+    }
     pane.connect_location_notify(glib::clone!(
         #[weak]
         address,
@@ -326,7 +475,10 @@ pub(super) fn present(
         }
     ));
     window.add_controller(keys);
-    let initial = folder_from_options(options)
+    let initial = current_file
+        .as_ref()
+        .and_then(|file| file.parent())
+        .or_else(|| folder_from_options(options))
         .filter(|folder| {
             folder.query_file_type(gio::FileQueryInfoFlags::NONE, gio::Cancellable::NONE)
                 == gio::FileType::Directory
@@ -336,7 +488,36 @@ pub(super) fn present(
     gtk::prelude::WidgetExt::realize(&window);
     set_parent(&window, parent);
     window.present();
+    if mode == Mode::Save {
+        // Ready to type over the name, keeping its extension.
+        name.grab_focus();
+        let text = name.text();
+        let stem = naming::stem_char_count(&text, false);
+        name.select_region(0, stem as i32);
+    }
     Ok(window)
+}
+
+fn confirm_replace(window: &adw::Window, name: &str, finish: Rc<dyn Fn(Vec<String>)>, uri: String) {
+    let dialog = adw::AlertDialog::builder()
+        .heading(gettext("Replace “{}”?").replace("{}", name))
+        .body(gettext(
+            "A file with this name already exists. Saving will replace its contents.",
+        ))
+        .default_response("cancel")
+        .close_response("cancel")
+        .build();
+    dialog.add_responses(&[
+        ("cancel", &gettext("_Cancel")),
+        ("replace", &gettext("_Replace")),
+    ]);
+    dialog.set_response_appearance("replace", adw::ResponseAppearance::Destructive);
+    dialog.connect_response(None, move |_, response| {
+        if response == "replace" {
+            finish(vec![uri.clone()]);
+        }
+    });
+    dialog.present(Some(window));
 }
 
 fn selected(pane: &FolderPane, directory: bool) -> Vec<gio::File> {

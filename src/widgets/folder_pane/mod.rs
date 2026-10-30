@@ -21,6 +21,7 @@ use std::rc::Rc;
 use std::sync::OnceLock;
 use std::time::Duration;
 
+use adw::prelude::AlertDialogExtManual;
 use gettextrs::{gettext, ngettext};
 use gtk::{gdk, gio, glib, glib::clone, prelude::*, subclass::prelude::*};
 
@@ -31,6 +32,7 @@ use crate::model::places;
 use crate::model::search_filters::{DateRange, Filters, Kind, SizeRange};
 use crate::model::view_settings::{self, FolderView};
 use crate::model::{DirectoryModel, FileItem, History, sorting};
+use crate::services::executable::{self, Executable};
 use crate::services::file_ops::{FileOpJob, Operation, naming, queue};
 use crate::services::search::{self, Search};
 use crate::services::volumes;
@@ -784,7 +786,8 @@ impl FolderPane {
 
     // ── Opening ────────────────────────────────────────────────────────────
 
-    /// Opens folders in place and files with their default application
+    /// Opens folders in place, runs local executables and opens documents
+    /// with their default application
     /// (or an app chooser when `choose_app` is set).
     pub fn open_item(&self, item: &FileItem, choose_app: bool) {
         if self.imp().picker.get() {
@@ -859,6 +862,90 @@ impl FolderPane {
     }
 
     fn launch(&self, file: &gio::File, choose_app: bool) {
+        if choose_app || !file.is_native() || dnd::is_trash(file) {
+            self.launch_with_app(file, choose_app);
+            return;
+        }
+        let file = file.clone();
+        glib::spawn_future_local(clone!(
+            #[weak(rename_to = pane)]
+            self,
+            async move {
+                let executable = file
+                    .query_info_future(
+                        executable::ATTRIBUTES,
+                        gio::FileQueryInfoFlags::NONE,
+                        glib::Priority::DEFAULT,
+                    )
+                    .await
+                    .ok()
+                    .and_then(|info| Executable::from_info(&file, &info));
+                let Some(executable) = executable else {
+                    pane.launch_with_app(&file, false);
+                    return;
+                };
+                let name = display_name(&file);
+                if !executable.can_execute {
+                    let dialog = adw::AlertDialog::builder()
+                        .heading(gettext("“{}” Is Not Executable").replace("{}", &name))
+                        .body(gettext(
+                            "Open Properties → Permissions and enable execution to run this file.",
+                        ))
+                        .close_response("cancel")
+                        .build();
+                    dialog.add_responses(&[
+                        ("cancel", &gettext("_Close")),
+                        ("open", &gettext("_Open With…")),
+                    ]);
+                    if dialog.choose_future(Some(&pane)).await == "open" {
+                        pane.launch_with_app(&file, true);
+                    }
+                    return;
+                }
+                let in_terminal = if executable.is_script {
+                    let dialog = adw::AlertDialog::builder()
+                        .heading(gettext("Run “{}”?").replace("{}", &name))
+                        .body(gettext(
+                            "Choose whether to run this script or open it in an app.",
+                        ))
+                        .default_response("terminal")
+                        .close_response("cancel")
+                        .build();
+                    dialog.add_responses(&[
+                        ("cancel", &gettext("_Cancel")),
+                        ("open", &gettext("_Open With…")),
+                        ("run", &gettext("_Run")),
+                        ("terminal", &gettext("Run in _Terminal")),
+                    ]);
+                    match dialog.choose_future(Some(&pane)).await.as_str() {
+                        "run" => false,
+                        "terminal" => true,
+                        "open" => {
+                            pane.launch_with_app(&file, true);
+                            return;
+                        }
+                        _ => return,
+                    }
+                } else {
+                    false
+                };
+                let result = match executable.launch(in_terminal) {
+                    Ok(process) => process.wait_check_future().await,
+                    Err(error) => Err(error),
+                };
+                if let Err(error) = result {
+                    tracing::warn!("could not run {name}: {error}");
+                    pane.show_toast(
+                        &gettext("Could not run “{}”: {}")
+                            .replacen("{}", &name, 1)
+                            .replacen("{}", &error.to_string(), 1),
+                    );
+                }
+            }
+        ));
+    }
+
+    fn launch_with_app(&self, file: &gio::File, choose_app: bool) {
         let launcher = gtk::FileLauncher::new(Some(file));
         launcher.set_always_ask(choose_app);
         let window = self.root().and_downcast::<gtk::Window>();

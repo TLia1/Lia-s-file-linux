@@ -1,9 +1,10 @@
 # Use Lia Files to choose files and folders
 
 The native installation includes a file chooser portal backend. Apps that use
-`org.freedesktop.portal.FileChooser` show Lia Files for **Open/Choose File** and
-**Select Folder**, with its sidebar, breadcrumbs, search and file view. Picking a
-file returns it to the requesting app instead of opening another application.
+`org.freedesktop.portal.FileChooser` show Lia Files for **Open/Choose File**,
+**Select Folder** and **Save As** (for example choosing where a browser download
+goes), with its sidebar, breadcrumbs, search and file view. Picking a file returns
+it to the requesting app instead of opening another application.
 
 Supported: single/multiple files or folders, initial folder, custom accept label,
 glob and MIME filters, current filter, application choices, cancellation, and
@@ -11,16 +12,22 @@ independent simultaneous requests. Folder mode lets you select the current
 folder by pressing **Select Folder** without selecting a row. Ctrl+L edits the
 location, Ctrl+H toggles hidden files, and Escape cancels.
 
-SaveFile and SaveFiles requests are forwarded directly to
-`xdg-desktop-portal-gtk`, including its overwrite confirmation and save options.
-Keep that backend installed. Only local paths and mounted locations exposed as
+**Save** shows a name field above the browser, prefilled with the app's
+suggestion (the extension is left out of the selection). Clicking a file copies its
+name; activating it or typing an existing name asks before replacing it; typing a
+folder's name opens that folder. Saving needs a writable folder, and names are
+checked like a rename (including FAT/NTFS rules on those drives). **Save several
+files** (SaveFiles) picks a folder; suggested names that already exist there get a
+number instead of replacing anything.
+
+Only local paths and mounted locations exposed as
 local paths can be returned. Wayland exported parent handles are supported;
 X11 pickers currently open as separate windows without parent-window attachment.
 
 ## Install and enable
 
-Requires a **native host installation**, `xdg-desktop-portal`, and
-`xdg-desktop-portal-gtk`. The Flatpak build deliberately does not install a
+Requires a **native host installation** and `xdg-desktop-portal`
+(`xdg-desktop-portal-gtk` is kept as a fallback when Lia Files isn't installed). The Flatpak build deliberately does not install a
 backend: a sandboxed file manager cannot serve as the host's file chooser.
 
 ```sh
@@ -81,7 +88,8 @@ and restart affected apps. Keep a backup of your previous configuration.
 `cargo test` covers filesystem path handling, URI encoding, selection types and
 cardinality. The display-dependent test exercises real D-Bus requests, file and
 folder selection, filters, choices, single-file activation, concurrent requests,
-request-owner checks, caller disconnect, cancellation and save forwarding.
+request-owner checks, caller disconnect, cancellation, saving a new file,
+confirming a replacement and saving several files.
 Run it on a disposable bus and display:
 
 ```sh
@@ -99,8 +107,8 @@ settings. To also render a PNG, first open the Broadway page at
 test. A connected Broadway browser is required for rendering.
 
 Manual checks: open an upload picker and a folder picker in a portal-using app;
-select, cancel and reopen them. Test Save As to verify GTK save dialogs still
-work. On Wayland, check that the picker stays associated with the requesting
+select, cancel and reopen them. Test Save As (a browser download asking where
+to save) with a new name, an existing file and a folder name. On Wayland, check that the picker stays associated with the requesting
 window. Restart the backend after installing a new binary if it is already
 running:
 

@@ -3,7 +3,7 @@
 use std::ffi::OsString;
 use std::path::Path;
 
-use lia_files::services::terminal::{TERMINALS, candidates, command};
+use lia_files::services::terminal::{TERMINALS, candidates, command, command_with_program};
 
 fn named(name: &str) -> lia_files::services::terminal::Terminal {
     *TERMINALS.iter().find(|t| t.program == name).unwrap()
@@ -56,5 +56,33 @@ fn passes_the_folder_the_way_each_terminal_expects() {
     assert_eq!(
         argv("wezterm", dir),
         ["wezterm", "start", "--cwd", "/home/lia/My Projects"]
+    );
+}
+
+#[test]
+fn programs_are_passed_as_separate_arguments_to_terminals() {
+    let dir = Path::new("/tmp/my folder");
+    let program = [OsString::from("/tmp/my folder/a;$(echo unsafe).sh")];
+    for terminal in TERMINALS {
+        let argv = command_with_program(&terminal, dir, &program);
+        assert_eq!(argv.last(), Some(&program[0]));
+    }
+    assert_eq!(
+        command_with_program(&named("kitty"), dir, &program),
+        [
+            "kitty",
+            "--directory",
+            "/tmp/my folder",
+            "/tmp/my folder/a;$(echo unsafe).sh"
+        ]
+    );
+    assert_eq!(
+        command_with_program(&named("gnome-terminal"), dir, &program),
+        [
+            "gnome-terminal",
+            "--working-directory=/tmp/my folder",
+            "--",
+            "/tmp/my folder/a;$(echo unsafe).sh"
+        ]
     );
 }

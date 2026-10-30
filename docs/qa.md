@@ -90,6 +90,16 @@ Unplug the mouse:
 
 ### Integration
 
+- [ ] Double-click a local Linux executable: it starts directly. Double-click
+      an executable `.sh` script: Run, Run in Terminal and Open With work.
+      Test a Bash shebang, a shell script without a shebang, a symlink, and
+      filenames containing spaces and shell punctuation. The working directory
+      should be the file's parent folder.
+- [ ] Remove execute permission: opening a program or script explains how to
+      enable execution in Properties → Permissions, without changing permissions.
+      Open With still opens an app chooser; documents, remote files and file
+      chooser selections never execute. Check native and Flatpak builds.
+
 - [ ] "Show in folder" from a browser's downloads opens the folder with the
       file selected. Or by hand:
       `gdbus call --session --dest org.freedesktop.FileManager1 --object-path /org/freedesktop/FileManager1 --method org.freedesktop.FileManager1.ShowItems "['file:///etc/hosts']" ""`
@@ -97,7 +107,8 @@ Unplug the mouse:
       Another running file manager may own the name: quit it first.
 
 - [ ] File/folder chooser portal: follow [File chooser integration](file-chooser.md),
-      including cancellation, simultaneous requests and GTK Save As.
+      including cancellation, simultaneous requests, Save As over an existing
+      file and saving several files.
 
 ## Release
 

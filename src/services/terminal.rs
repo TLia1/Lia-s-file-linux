@@ -113,6 +113,25 @@ pub fn command(terminal: &Terminal, dir: &Path) -> Vec<OsString> {
     argv
 }
 
+/// Opens a program in the terminal, preserving each argument literally.
+pub fn command_with_program(
+    terminal: &Terminal,
+    dir: &Path,
+    program: &[OsString],
+) -> Vec<OsString> {
+    let mut argv = command(terminal, dir);
+    let separator = match terminal.program {
+        "kitty" => None,
+        "xdg-terminal-exec" | "ptyxis" | "kgx" | "gnome-terminal" | "wezterm" => Some("--"),
+        _ => Some("-e"),
+    };
+    if let Some(separator) = separator {
+        argv.push(separator.into());
+    }
+    argv.extend_from_slice(program);
+    argv
+}
+
 /// The first installed terminal.
 pub fn find() -> Option<Terminal> {
     let desktop = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();

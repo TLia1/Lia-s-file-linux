@@ -1,18 +1,20 @@
-//! Host file chooser portal. OpenFile uses Lia's browser; saves are delegated
-//! directly to the GTK backend (never to the frontend, which would recurse).
+//! Host file chooser portal: opening, choosing folders and saving all use
+//! Lia's browser.
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use gettextrs::gettext;
 use gtk::{gio, glib};
+
+use crate::services::file_ops::naming;
 
 mod picker;
 
 pub const BUS_NAME: &str = "org.freedesktop.impl.portal.desktop.lia";
 const INTERFACE: &str = "org.freedesktop.impl.portal.FileChooser";
 const OBJECT_PATH: &str = "/org/freedesktop/portal/desktop";
-const GTK_BACKEND: &str = "org.freedesktop.impl.portal.desktop.gtk";
 pub type Options = HashMap<String, glib::Variant>;
 pub type FileFilter = (String, Vec<(u32, String)>);
 pub type Choice = (String, String, Vec<(String, String)>, String);
@@ -44,9 +46,6 @@ struct Request {
     registration: RefCell<Option<gio::RegistrationId>>,
     watcher: RefCell<Option<Box<dyn FnOnce()>>>,
     window: RefCell<Option<adw::Window>>,
-    forwarded: bool,
-    handle: String,
-    cancellable: gio::Cancellable,
 }
 
 impl Request {
@@ -72,24 +71,6 @@ impl Request {
     }
 
     fn cancel(&self) {
-        if self.invocation.borrow().is_none() {
-            return;
-        }
-        if self.forwarded {
-            self.connection.call(
-                Some(GTK_BACKEND),
-                &self.handle,
-                "org.freedesktop.impl.portal.Request",
-                "Close",
-                None,
-                None,
-                gio::DBusCallFlags::NONE,
-                5000,
-                gio::Cancellable::NONE,
-                |_| {},
-            );
-            self.cancellable.cancel();
-        }
         self.respond(1, Options::new());
     }
 }
@@ -172,9 +153,6 @@ fn dispatch(
         registration: RefCell::default(),
         watcher: RefCell::default(),
         window: RefCell::default(),
-        forwarded: method != "OpenFile",
-        handle: handle.to_string(),
-        cancellable: gio::Cancellable::new(),
     });
     let info = gio::DBusNodeInfo::for_xml(REQUEST_XML)
         .unwrap()
@@ -219,49 +197,87 @@ fn dispatch(
             .watcher
             .replace(Some(Box::new(move || gio::bus_unwatch_name(watcher))));
     }
-    if method == "OpenFile" {
-        match picker::present(app, &title, &parent, &options, request.clone()) {
-            Ok(window) => {
-                request.window.replace(Some(window));
-            }
-            Err(error) => {
-                tracing::warn!("invalid chooser options: {error}");
-                request.respond(2, Options::new());
-            }
+    let mode = match method {
+        "SaveFile" => picker::Mode::Save,
+        "SaveFiles" => picker::Mode::SaveFiles,
+        _ => picker::Mode::Open,
+    };
+    match picker::present(app, mode, &title, &parent, &options, request.clone()) {
+        Ok(window) => {
+            request.window.replace(Some(window));
         }
-    } else {
-        let pending = request.clone();
-        connection.call(
-            Some(GTK_BACKEND),
-            OBJECT_PATH,
-            INTERFACE,
-            method,
-            Some(&params),
-            None,
-            gio::DBusCallFlags::NONE,
-            i32::MAX,
-            Some(&request.cancellable),
-            move |result| match result {
-                Ok(result) => pending.finish(result),
-                Err(error) => {
-                    tracing::warn!("GTK save chooser failed: {error}");
-                    pending.respond(2, Options::new());
-                }
-            },
-        );
+        Err(error) => {
+            tracing::warn!("invalid chooser options: {error}");
+            request.respond(2, Options::new());
+        }
     }
 }
 
 /// Decode a portal path without losing non-UTF-8 filesystem bytes.
 pub fn folder_from_options(options: &Options) -> Option<gio::File> {
+    path_option(options, "current_folder")
+}
+
+/// The file a Save request suggests overwriting (SaveFile's `current_file`).
+pub fn current_file_from_options(options: &Options) -> Option<gio::File> {
+    path_option(options, "current_file")
+}
+
+fn path_option(options: &Options, key: &str) -> Option<gio::File> {
+    let bytes = options.get(key)?.get::<Vec<u8>>()?;
+    path_from_bytes(&bytes).map(gio::File::for_path)
+}
+
+fn path_from_bytes(bytes: &[u8]) -> Option<std::path::PathBuf> {
     use std::os::unix::ffi::OsStrExt;
-    let bytes = options.get("current_folder")?.get::<Vec<u8>>()?;
-    let bytes = bytes.strip_suffix(&[0]).unwrap_or(&bytes);
+    let bytes = bytes.strip_suffix(&[0]).unwrap_or(bytes);
     if bytes.is_empty() || bytes.contains(&0) {
         return None;
     }
     let path = std::path::Path::new(std::ffi::OsStr::from_bytes(bytes));
-    path.is_absolute().then(|| gio::File::for_path(path))
+    path.is_absolute().then(|| path.to_path_buf())
+}
+
+/// Where SaveFile writes `name` in `folder`. The file need not exist yet.
+pub fn save_uri(folder: &gio::File, name: &str, portable: bool) -> Result<String, String> {
+    naming::validate_name(name, portable).map_err(|error| error.message())?;
+    let folder = folder
+        .path()
+        .ok_or_else(|| gettext("This location is not available as a local file."))?;
+    if !folder.is_dir() {
+        return Err(gettext("The folder is no longer available."));
+    }
+    Ok(gio::File::for_path(folder.join(name)).uri().to_string())
+}
+
+/// SaveFiles puts every suggested name in `folder`, renaming the ones that
+/// would replace an existing file (or each other), as the portal allows.
+pub fn save_files_uris(folder: &gio::File, files: &[Vec<u8>]) -> Result<Vec<String>, String> {
+    use std::os::unix::ffi::OsStrExt;
+    let folder = folder
+        .path()
+        .ok_or_else(|| gettext("This location is not available as a local file."))?;
+    if !folder.is_dir() {
+        return Err(gettext("The folder is no longer available."));
+    }
+    let mut taken: Vec<std::ffi::OsString> = Vec::new();
+    let mut uris = Vec::with_capacity(files.len());
+    for bytes in files {
+        let bytes = bytes.strip_suffix(&[0]).unwrap_or(bytes);
+        let suggested = std::path::Path::new(std::ffi::OsStr::from_bytes(bytes))
+            .file_name()
+            .filter(|name| {
+                !bytes.contains(&0) && naming::validate_name(&name.to_string_lossy(), false).is_ok()
+            })
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_else(|| gettext("Untitled"));
+        let name = naming::unique_name(&suggested, false, naming::UniqueStyle::Numbered, |n| {
+            taken.iter().any(|t| t.as_os_str() == n) || folder.join(n).exists()
+        });
+        taken.push(name.clone().into());
+        uris.push(gio::File::for_path(folder.join(name)).uri().to_string());
+    }
+    Ok(uris)
 }
 
 /// Only local/FUSE-backed paths may be returned by a portal backend.

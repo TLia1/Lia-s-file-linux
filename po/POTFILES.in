@@ -20,6 +20,7 @@ src/dialogs/open_with.rs
 src/dialogs/properties.rs
 src/services/network.rs
 src/services/terminal.rs
+src/services/executable.rs
 src/services/volumes.rs
 src/widgets/app_chooser.rs
 src/widgets/this_pc.rs
@@ -43,4 +44,5 @@ src/services/file_ops/naming.rs
 src/widgets/address_bar/crumbs_box.rs
 src/widgets/operations_popover/mod.rs
 
+src/services/file_chooser/mod.rs
 src/services/file_chooser/picker.rs
