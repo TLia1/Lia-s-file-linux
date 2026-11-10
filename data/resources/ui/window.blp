@@ -466,6 +466,12 @@ template $LiaWindow: Adw.ApplicationWindow {
 menu primary_menu {
   section {
     item {
+      label: _("Analyze Disk Usage");
+      action: "win.disk-usage";
+    }
+  }
+  section {
+    item {
       label: _("_New Window");
       action: "app.new-window";
     }

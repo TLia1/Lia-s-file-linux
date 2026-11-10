@@ -46,3 +46,5 @@ src/widgets/operations_popover/mod.rs
 
 src/services/file_chooser/mod.rs
 src/services/file_chooser/picker.rs
+
+src/dialogs/disk_analyzer.rs

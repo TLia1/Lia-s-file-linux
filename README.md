@@ -36,6 +36,21 @@ Flatpak: `flatpak-builder --user --install --force-clean _flatpak build-aux/io.g
 has the manual checklist and the release steps. [PLAN.md](PLAN.md) describes
 the design and architecture.
 
+## Disk usage
+
+Choose **Analyze Disk Usage** from the main menu or a folder’s context menu.
+The selected folder (or current location) is scanned in the background. Results
+show allocated space, largest first, with percentage bars. Click a folder to
+explore it, use the up arrow to return, or **Open Folder** to browse it normally.
+Click a file to reveal it in the file manager.
+Large lists load 100 entries at a time. You can cancel or close a running scan.
+
+Hidden files are included. Symbolic links are not followed, hard links are
+counted once, and other filesystems and virtual system folders are skipped.
+Unreadable entries are reported, so incomplete totals are visible. Shared or
+compressed filesystem extents can make these totals differ from reclaimable
+space; this tool does not delete files.
+
 ## Themes
 
 Appearance preferences and watched user stylesheets let Lia Files follow desktop

@@ -69,6 +69,7 @@ keyboard-shortcuts app.shortcuts
 about app.about
 connect-to-server win.connect-to-server
 properties win.select-all win.properties
+disk-usage win.disk-usage
 folder-properties win.location-properties=
 batch-rename win.select-all win.rename
 compress win.select-all win.compress

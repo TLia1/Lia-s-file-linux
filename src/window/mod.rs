@@ -514,6 +514,7 @@ impl Window {
         );
         self.set_action_enabled("properties", !self.properties_targets().is_empty());
         self.set_action_enabled("open-terminal", self.terminal_folder().is_some());
+        self.set_action_enabled("disk-usage", self.terminal_folder().is_some());
         self.set_action_enabled("quick-look", any);
 
         // Archives: local files only (libarchive works on paths).
@@ -882,6 +883,11 @@ impl Window {
             window_action("empty-trash", Self::empty_trash),
             // Properties, terminal, servers
             window_action("properties", Self::show_properties),
+            window_action("disk-usage", |window| {
+                if let (Some(root), Some(pane)) = (window.terminal_folder(), window.active_pane()) {
+                    dialogs::disk_analyzer::present(window, root, &pane);
+                }
+            }),
             gio::ActionEntry::builder("location-properties")
                 .parameter_type(Some(glib::VariantTy::STRING))
                 .activate(|window: &Self, _, parameter| {

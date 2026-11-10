@@ -18,3 +18,5 @@ pub mod undo;
 pub mod volumes;
 
 pub mod custom_actions;
+
+pub mod disk_analyzer;

@@ -9,3 +9,5 @@ pub mod open_with;
 pub mod preferences;
 pub mod properties;
 pub mod quick_look;
+
+pub mod disk_analyzer;

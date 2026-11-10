@@ -275,9 +275,7 @@ pub(super) fn present(
         finish,
         move |files: Vec<gio::File>| {
             let result = match mode {
-                Mode::Open => {
-                    selection_uris(&files, directory, multiple).map_err(|message| gettext(message))
-                }
+                Mode::Open => selection_uris(&files, directory, multiple).map_err(gettext),
                 Mode::SaveFiles => files
                     .first()
                     .ok_or_else(|| gettext("Select a folder."))

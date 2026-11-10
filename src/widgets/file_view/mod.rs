@@ -1720,6 +1720,7 @@ fn item_menu(trash: bool, archives: bool) -> gio::Menu {
             (gettext("_Pin to Sidebar"), "win.pin"),
             (gettext("Copy _Path"), "win.copy-path"),
             (gettext("Open in Ter_minal"), "win.open-terminal"),
+            (gettext("Analyze Disk Usage"), "win.disk-usage"),
         ]),
     );
     menu.append_section(
@@ -1795,6 +1796,7 @@ fn background_menu(trash: bool) -> gio::Menu {
             (gettext("_Refresh"), "win.reload"),
             (gettext("Copy _Path"), "win.copy-path"),
             (gettext("Open in Ter_minal"), "win.open-terminal"),
+            (gettext("Analyze Disk Usage"), "win.disk-usage"),
             (gettext("P_roperties"), "win.properties"),
         ]),
     );
