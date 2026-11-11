@@ -67,20 +67,25 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", type=Path, default=ROOT / "target/release/lia-files")
     parser.add_argument("--enable", action="store_true")
+    parser.add_argument("--uninstall", action="store_true", help="Remove user-local portal files")
     args = parser.parse_args()
-    if not args.binary.is_file() or not os.access(args.binary, os.X_OK):
-        parser.error("Build an executable first with cargo build --release")
     data = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share"))
     config = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
     binary = data / "lia-files/libexec/lia-files-portal"
+    portal = data / "xdg-desktop-portal/portals/lia.portal"
+    service = data / "dbus-1/services/org.freedesktop.impl.portal.desktop.lia.service"
+    if args.uninstall:
+        for path in (binary, portal, service):
+            path.unlink(missing_ok=True)
+        return
+    if not args.binary.is_file() or not os.access(args.binary, os.X_OK):
+        parser.error("Build an executable first with cargo build --release")
     atomic_copy(args.binary, binary, 0o755)
-    atomic_copy(ROOT / "data/lia.portal", data / "xdg-desktop-portal/portals/lia.portal")
+    atomic_copy(ROOT / "data/lia.portal", portal)
     schema_dir = data / "glib-2.0/schemas"
     atomic_copy(ROOT / "data/io.github.lia.Files.gschema.xml", schema_dir / "io.github.lia.Files.gschema.xml")
     subprocess.run(["glib-compile-schemas", str(schema_dir)], check=True)
-    services = data / "dbus-1/services"
-    services.mkdir(parents=True, exist_ok=True)
-    service = services / "org.freedesktop.impl.portal.desktop.lia.service"
+    service.parent.mkdir(parents=True, exist_ok=True)
     service.write_text("[D-BUS Service]\nName=org.freedesktop.impl.portal.desktop.lia\n"
                        f"Exec={shlex.quote(str(binary))} --file-chooser-portal\n")
     if args.enable:

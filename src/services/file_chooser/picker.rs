@@ -83,6 +83,7 @@ pub(super) fn present(
         .default_width(980)
         .default_height(660)
         .modal(modal)
+        .css_classes(["lia-window"])
         .build();
     let pane = FolderPane::new();
     pane.set_picker_mode(directory, multiple);

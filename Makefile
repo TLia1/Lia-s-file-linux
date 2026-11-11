@@ -14,6 +14,10 @@ build:
 
 install: build
 	ninja -C build install
+	python3 tools/install-user-portal.py --uninstall
+	-gapplication action io.github.lia.Files.Portal quit >/dev/null 2>&1
+	-gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus --method org.freedesktop.DBus.ReloadConfig >/dev/null 2>&1
+	-systemctl --user try-restart xdg-desktop-portal.service >/dev/null 2>&1
 
 test:
 	cargo test
