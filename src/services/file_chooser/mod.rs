@@ -42,6 +42,7 @@ fn interface_xml() -> String {
 /// A pending interaction owns its invocation until a single terminal response.
 struct Request {
     connection: gio::DBusConnection,
+    hold: RefCell<Option<gio::ApplicationHoldGuard>>,
     invocation: RefCell<Option<gio::DBusMethodInvocation>>,
     registration: RefCell<Option<gio::RegistrationId>>,
     watcher: RefCell<Option<Box<dyn FnOnce()>>>,
@@ -64,6 +65,10 @@ impl Request {
             window.destroy();
         }
         invocation.return_value(Some(&result));
+        let _ = self.connection.flush_sync(gio::Cancellable::NONE);
+        // Release the application hold once the reply is sent so the portal
+        // exits after its inactivity timeout and frees GTK/GPU memory.
+        self.hold.take();
     }
 
     fn respond(&self, response: u32, results: Options) {
@@ -76,9 +81,12 @@ impl Request {
 }
 
 pub fn run() -> glib::ExitCode {
+    // Exit 2s after the last picker closes so GTK/GSK/GPU caches (~150 MB) are
+    // not kept in RAM while idle; D-Bus re-activates the service on demand.
     let app = adw::Application::builder()
         .application_id("io.github.lia.Files.Portal")
         .flags(gio::ApplicationFlags::IS_SERVICE)
+        .inactivity_timeout(2000)
         .resource_base_path(crate::config::RESOURCE_BASE)
         .build();
     app.connect_startup(|app| {
@@ -119,10 +127,6 @@ pub fn run() -> glib::ExitCode {
             app.quit();
             return;
         }
-        let hold = RefCell::new(Some(app.hold()));
-        app.connect_shutdown(move |_| {
-            hold.borrow_mut().take();
-        });
         app.add_action_entries([gio::ActionEntry::builder("quit")
             .activate(|app: &adw::Application, _, _| app.quit())
             .build()]);
@@ -149,6 +153,7 @@ fn dispatch(
     };
     let request = Rc::new(Request {
         connection: connection.clone(),
+        hold: RefCell::new(Some(app.hold())),
         invocation: RefCell::new(Some(invocation)),
         registration: RefCell::default(),
         watcher: RefCell::default(),
@@ -321,9 +326,15 @@ fn export(
         .lookup_interface(INTERFACE)
         .unwrap();
     let weak = app.downgrade();
+    let prop_weak = weak.clone();
     connection
         .register_object(OBJECT_PATH, &info)
-        .property(|_, _, _, _, _| 4u32.to_variant())
+        .property(move |_, _, _, _, _| {
+            if let Some(app) = prop_weak.upgrade() {
+                drop(app.hold());
+            }
+            4u32.to_variant()
+        })
         .method_call(
             move |connection, sender, _, _, method, params, invocation| {
                 if let Some(app) = weak.upgrade() {
